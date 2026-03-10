@@ -1,30 +1,32 @@
 # Sora Pusher Skill
 
-AI 视频生成与社交媒体自动化发布技能。基于 OpenClaw 的浏览器能力实现。
+AI 视频生成与社交媒体自动化发布技能。集成火山引擎 Seedance 2.0 与 OpenClaw 浏览器引擎。
 
 ## 🚀 功能
-- **视频生成**：调用 Seedance 2.0 / Sora 2 API 生成高画质视频。
-- **自动发布**：基于 `browser` 助手将生成的视频发布到抖音（Douyin）等平台。
-- **任务流水线**：实现从文本 Prompt 到视频文件，再到社交媒体发布的端到端自动化。
+- **视频生成**：调用 **火山引擎 (Volcengine) Ark** 下的 Seedance 2.0 / Sora 2 模型生成视频。
+- **自动发布**：驱动 `browser` 助手将生成的视频发布到抖音（Douyin）创作者中心。
+- **任务流水线**：从生成、状态轮询到文件下载与上传的全流程自动化。
 
 ## 📁 目录结构
 - `SKILL.md`: 技能核心定义。
-- `scripts/`: 核心逻辑脚本（包含 `video_gen.py` 生成逻辑）。
-- `references/`: 平台发布流程说明。
+- `scripts/`: 核心逻辑脚本。
+  - `volc_gen.py`: 火山引擎 Seedance 2.0 专用生成脚本。
+  - `video_gen.py`: 基于 Atlas Cloud 的备选生成脚本。
+- `references/`: 平台发布流程。
 
 ## 🛠️ 配置要求
-- `SEEDANCE_API_KEY`: Seedance 2.0 访问密钥（获取自 [Atlas Cloud](https://api.atlascloud.ai) 或对应服务商）。
-- 抖音登录状态：建议先使用 `browser` 助手手动登录一次 `https://creator.douyin.com/`，OpenClaw 会自动保持 Session。
+- `VOLC_API_KEY`: 火山引擎 Ark API 密钥。
+- `VOLC_MODEL_ENDPOINT`: 火山引擎中 Seedance 2.0 的 **推理终端 ID**。
+- 登录状态：需通过 `browser` 助手手动登录一次 `https://creator.douyin.com/`。
 
 ## 📝 核心规则 (Rules)
-1. **生成流程**：使用 `python3 ~/.openclaw/skills/sora-pusher/scripts/video_gen.py --prompt "[提示词]"` 生成视频。
-2. **发布流程**：生成后，需调用 `browser` 助手前往抖音创作者中心上传。
-3. **超时处理**：生成任务默认超时时间为 600 秒，若超过此时间需提醒用户。
-4. **异常重试**：网络请求失败时应自动重试 3 次。
+1. **生成流程**：使用 `python3 ~/.openclaw/skills/sora-pusher/scripts/volc_gen.py --prompt "[提示词]" --endpoint "[推理终端ID]"`。
+2. **发布流程**：生成后自动调用 `browser` 助手执行上传与发布指令。
+3. **超时与重试**：默认超时 900 秒，自动处理火山引擎 API 的异步状态。
 
 ## 📖 使用示例
-- "帮我用 Seedance 生成一段赛博朋克风格的视频并发布到抖音，标题是：未来已来"
-- "把这段描述转成 1080p 视频发抖音，提示词是：[具体描述]"
+- "用火山引擎生成一段赛博朋克风格的视频并发布到抖音，标题是：AI 浪潮"
+- "把这段文字生成视频发抖音：[描述词]"
 
 ## 🤝 鸣谢
 - 流程参考 [social-push](https://github.com/jihe520/social-push)
