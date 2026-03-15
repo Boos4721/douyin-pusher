@@ -127,17 +127,31 @@ class PlaywrightClient:
                     "**/creator-micro/**",
                     timeout=120000,  # 2 minutes
                 )
-                # Wait a bit for cookies to settle
                 await page.wait_for_timeout(3000)
             except Exception:
                 print("[dy] 登录超时")
                 await browser.close()
                 return False
 
+            # Visit multiple pages to collect ALL cookies
+            print("[dy] 正在收集完整 Cookie...")
+            for url in [
+                "https://www.douyin.com/",
+                "https://creator.douyin.com/creator-micro/content/manage",
+            ]:
+                try:
+                    await page.goto(url, wait_until="domcontentloaded")
+                    await page.wait_for_timeout(2000)
+                except Exception:
+                    pass
+
             # Save cookies
             os.makedirs(os.path.dirname(self.cookie_file), exist_ok=True)
             await context.storage_state(path=self.cookie_file)
-            print(f"[dy] Cookie 已保存: {self.cookie_file}")
+
+            cookies = await context.cookies()
+            douyin_count = len([c for c in cookies if "douyin" in c.get("domain", "")])
+            print(f"[dy] Cookie 已保存: {douyin_count} 个 ({self.cookie_file})")
             await browser.close()
             return True
 

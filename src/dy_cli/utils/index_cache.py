@@ -52,7 +52,7 @@ def get_by_index(index: int) -> dict[str, str] | None:
 
 
 def resolve_id(id_or_index: str) -> str:
-    """解析 aweme_id: 如果是纯数字且 ≤ 缓存长度则视为索引，否则视为 ID。"""
+    """解析 aweme_id: 短数字(≤999)视为索引，长数字视为 ID，含字母/URL 原样返回。"""
     if not id_or_index.isdigit():
         return id_or_index
 
@@ -62,6 +62,11 @@ def resolve_id(id_or_index: str) -> str:
         entry = get_by_index(n)
         if entry:
             return entry["aweme_id"]
+        # 索引不存在时给出明确提示，不要把 "1" 当 aweme_id
+        count = get_index_count()
+        if count == 0:
+            raise ValueError("没有缓存的搜索结果，请先执行 dy search")
+        raise ValueError(f"索引 {n} 超出范围 (共 {count} 条)")
 
     return id_or_index
 

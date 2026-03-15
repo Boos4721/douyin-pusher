@@ -85,7 +85,11 @@ def search(keyword, sort, pub_time, search_type, count, account, as_json):
 @click.option("--json-output", "as_json", is_flag=True, help="输出 JSON")
 def detail(aweme_id, comments, comment_count, account, as_json):
     """查看视频详情和评论。支持短索引 (dy search → dy detail 1)。"""
-    aweme_id = resolve_id(aweme_id)
+    try:
+        aweme_id = resolve_id(aweme_id)
+    except ValueError as e:
+        error(str(e))
+        raise SystemExit(1)
     client = DouyinAPIClient.from_config(account)
 
     try:

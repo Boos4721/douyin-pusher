@@ -39,7 +39,11 @@ def download(url_or_id, output_dir, music, account, as_json):
 
     try:
         # Resolve aweme_id (支持短索引)
-        url_or_id = resolve_id(url_or_id)
+        try:
+            url_or_id = resolve_id(url_or_id)
+        except ValueError as e:
+            error(str(e))
+            raise SystemExit(1)
         if url_or_id.isdigit():
             aweme_id = url_or_id
         else:
