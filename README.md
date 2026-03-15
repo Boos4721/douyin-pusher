@@ -14,6 +14,10 @@
 
 ---
 
+<p align="center">
+  <img src="./demo.gif" alt="dy-cli demo" width="800">
+</p>
+
 ## CLI Quick Start
 
 The fastest way to get started — **3 commands** from zero to searching:
