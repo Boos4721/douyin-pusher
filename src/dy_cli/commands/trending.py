@@ -8,6 +8,7 @@ import time
 import click
 
 from dy_cli.engines.api_client import DouyinAPIClient, DouyinAPIError
+from dy_cli.utils.export import export_data
 from dy_cli.utils.output import success, error, info, warning, console, print_trending, print_json
 
 
@@ -16,7 +17,8 @@ from dy_cli.utils.output import success, error, info, warning, console, print_tr
 @click.option("--watch", is_flag=True, help="实时刷新模式 (每 5 分钟更新)")
 @click.option("--account", default=None, help="使用指定账号")
 @click.option("--json-output", "as_json", is_flag=True, help="输出 JSON")
-def trending(count, watch, account, as_json):
+@click.option("-o", "--output", default=None, help="导出到文件 (.json/.csv/.yaml)")
+def trending(count, watch, account, as_json, output):
     """查看抖音热榜。"""
     client = DouyinAPIClient.from_config(account)
 
@@ -24,7 +26,7 @@ def trending(count, watch, account, as_json):
         if watch:
             _watch_trending(client, count, as_json)
         else:
-            _show_trending(client, count, as_json)
+            _show_trending(client, count, as_json, output)
     except KeyboardInterrupt:
         info("已退出热榜监控")
     except DouyinAPIError as e:
@@ -34,13 +36,17 @@ def trending(count, watch, account, as_json):
         client.close()
 
 
-def _show_trending(client: DouyinAPIClient, count: int, as_json: bool):
+def _show_trending(client: DouyinAPIClient, count: int, as_json: bool, output: str = None):
     """显示热榜。"""
     info("正在获取抖音热榜...")
     items = client.get_trending()
 
     if as_json:
         print_json(items[:count])
+        return
+
+    if output:
+        export_data(items[:count], output)
         return
 
     print_trending(items[:count])

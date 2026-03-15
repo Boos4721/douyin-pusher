@@ -1,102 +1,104 @@
 """
-dy like / comment / favorite / follow — 互动命令。
+dy like / comment / favorite / follow — 互动命令 (Playwright)。
 """
 from __future__ import annotations
 
 import click
 
-from dy_cli.engines.api_client import DouyinAPIClient, DouyinAPIError
+from dy_cli.engines.playwright_client import PlaywrightClient, PlaywrightError
+from dy_cli.utils.index_cache import resolve_id
 from dy_cli.utils.output import success, error, info, console, print_comments
 
 
-def _get_client(account=None):
-    return DouyinAPIClient.from_config(account)
+def _resolve(id_str: str) -> str:
+    try:
+        return resolve_id(id_str)
+    except ValueError as e:
+        error(str(e))
+        raise SystemExit(1)
 
 
-@click.command("like", help="点赞视频")
+def _pw(account=None) -> PlaywrightClient:
+    return PlaywrightClient(account=account, headless=True)
+
+
+@click.command("like", help="点赞视频 (支持短索引: dy like 1)")
 @click.argument("aweme_id")
 @click.option("--unlike", is_flag=True, help="取消点赞")
 @click.option("--account", default=None, help="使用指定账号")
 def like(aweme_id, unlike, account):
     """点赞或取消点赞。"""
-    action = "取消点赞" if unlike else "点赞"
-    info(f"正在{action}: {aweme_id}")
+    aweme_id = _resolve(aweme_id)
+    action = "unlike" if unlike else "like"
+    action_cn = "取消点赞" if unlike else "点赞"
+    info(f"正在{action_cn}: {aweme_id}")
 
-    # Note: Like requires signed API calls or Playwright interaction.
-    # This is a placeholder — actual implementation needs browser automation.
     try:
-        from dy_cli.engines.playwright_client import PlaywrightClient, PlaywrightError
-        # For now, use API client to verify video exists
-        client = _get_client(account)
-        detail = client.get_video_detail(aweme_id)
-        desc = detail.get("desc", "")[:30]
-        info(f"视频: {desc}")
-        client.close()
-
-        # TODO: Implement via Playwright interaction on douyin.com
-        info(f"互动功能需要浏览器自动化 (即将支持)")
-        info(f"可手动访问: https://www.douyin.com/video/{aweme_id}")
-
-    except DouyinAPIError as e:
-        error(f"{action}失败: {e}")
+        result = _pw(account).interact(aweme_id, action)
+        if result.get("success"):
+            success(f"{action_cn}成功 👍")
+        else:
+            error(f"{action_cn}失败: 未找到按钮")
+            raise SystemExit(1)
+    except PlaywrightError as e:
+        error(f"{action_cn}失败: {e}")
         raise SystemExit(1)
 
 
-@click.command("favorite", help="收藏视频")
+@click.command("favorite", help="收藏视频 (支持短索引: dy fav 1)")
 @click.argument("aweme_id")
 @click.option("--unfavorite", is_flag=True, help="取消收藏")
 @click.option("--account", default=None, help="使用指定账号")
 def favorite(aweme_id, unfavorite, account):
     """收藏或取消收藏。"""
-    action = "取消收藏" if unfavorite else "收藏"
-    info(f"正在{action}: {aweme_id}")
+    aweme_id = _resolve(aweme_id)
+    action = "unfavorite" if unfavorite else "favorite"
+    action_cn = "取消收藏" if unfavorite else "收藏"
+    info(f"正在{action_cn}: {aweme_id}")
 
     try:
-        client = _get_client(account)
-        detail = client.get_video_detail(aweme_id)
-        desc = detail.get("desc", "")[:30]
-        info(f"视频: {desc}")
-        client.close()
-
-        info(f"互动功能需要浏览器自动化 (即将支持)")
-        info(f"可手动访问: https://www.douyin.com/video/{aweme_id}")
-
-    except DouyinAPIError as e:
-        error(f"{action}失败: {e}")
+        result = _pw(account).interact(aweme_id, action)
+        if result.get("success"):
+            success(f"{action_cn}成功 ⭐")
+        else:
+            error(f"{action_cn}失败: 未找到按钮")
+            raise SystemExit(1)
+    except PlaywrightError as e:
+        error(f"{action_cn}失败: {e}")
         raise SystemExit(1)
 
 
-@click.command("comment", help="评论视频")
+@click.command("comment", help="评论视频 (支持短索引: dy comment 1 -c '好看')")
 @click.argument("aweme_id")
 @click.option("--content", "-c", required=True, help="评论内容")
 @click.option("--account", default=None, help="使用指定账号")
 def comment(aweme_id, content, account):
     """发表评论。"""
+    aweme_id = _resolve(aweme_id)
     info(f"正在评论: {aweme_id}")
 
     try:
-        client = _get_client(account)
-        detail = client.get_video_detail(aweme_id)
-        desc = detail.get("desc", "")[:30]
-        info(f"视频: {desc}")
-        client.close()
-
-        info(f"评论功能需要浏览器自动化 (即将支持)")
-        info(f"可手动访问: https://www.douyin.com/video/{aweme_id}")
-
-    except DouyinAPIError as e:
+        result = _pw(account).interact(aweme_id, "comment", content=content)
+        if result.get("success"):
+            success("评论成功 💬")
+        else:
+            error("评论失败: 未找到输入框")
+            raise SystemExit(1)
+    except PlaywrightError as e:
         error(f"评论失败: {e}")
         raise SystemExit(1)
 
 
-@click.command("comments", help="查看视频评论")
+@click.command("comments", help="查看视频评论 (支持短索引)")
 @click.argument("aweme_id")
 @click.option("--count", type=int, default=20, help="评论数量")
 @click.option("--account", default=None, help="使用指定账号")
 @click.option("--json-output", "as_json", is_flag=True, help="输出 JSON")
 def comments(aweme_id, count, account, as_json):
     """查看视频评论列表。"""
-    client = _get_client(account)
+    aweme_id = _resolve(aweme_id)
+    from dy_cli.engines.api_client import DouyinAPIClient, DouyinAPIError
+    client = DouyinAPIClient.from_config(account)
 
     try:
         info(f"正在获取评论: {aweme_id}")
@@ -122,18 +124,17 @@ def comments(aweme_id, count, account, as_json):
 @click.option("--account", default=None, help="使用指定账号")
 def follow(sec_user_id, unfollow, account):
     """关注或取消关注用户。"""
-    action = "取消关注" if unfollow else "关注"
-    info(f"正在{action}用户: {sec_user_id}")
+    action = "unfollow" if unfollow else "follow"
+    action_cn = "取消关注" if unfollow else "关注"
+    info(f"正在{action_cn}用户")
 
     try:
-        client = _get_client(account)
-        profile = client.get_user_profile(sec_user_id)
-        nickname = profile.get("nickname", "-")
-        info(f"用户: {nickname}")
-        client.close()
-
-        info(f"关注功能需要浏览器自动化 (即将支持)")
-
-    except DouyinAPIError as e:
-        error(f"{action}失败: {e}")
+        result = _pw(account).interact("", action, sec_user_id=sec_user_id)
+        if result.get("success"):
+            success(f"{action_cn}成功 👥")
+        else:
+            error(f"{action_cn}失败: 未找到按钮")
+            raise SystemExit(1)
+    except PlaywrightError as e:
+        error(f"{action_cn}失败: {e}")
         raise SystemExit(1)

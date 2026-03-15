@@ -9,6 +9,7 @@ import click
 
 from dy_cli.engines.api_client import DouyinAPIClient, DouyinAPIError
 from dy_cli.utils.index_cache import save_index, resolve_id
+from dy_cli.utils.export import export_data
 from dy_cli.utils.output import (
     success, error, info, warning, console,
     print_videos, print_json, print_video_detail, print_comments,
@@ -40,7 +41,8 @@ TIME_MAP = {
 @click.option("--count", type=int, default=20, help="结果数量 (默认 20)")
 @click.option("--account", default=None, help="使用指定账号")
 @click.option("--json-output", "as_json", is_flag=True, help="输出 JSON 格式")
-def search(keyword, sort, pub_time, search_type, count, account, as_json):
+@click.option("-o", "--output", default=None, help="导出到文件 (.json/.csv/.yaml)")
+def search(keyword, sort, pub_time, search_type, count, account, as_json, output):
     """搜索抖音视频/用户。"""
     client = DouyinAPIClient.from_config(account)
     info(f"正在搜索: {keyword}")
@@ -73,6 +75,11 @@ def search(keyword, sort, pub_time, search_type, count, account, as_json):
 
     # 缓存索引 — 支持 dy read 1 / dy download 3
     save_index(videos)
+
+    # 导出
+    if output:
+        export_data(videos, output)
+        return
 
     print_videos(videos, keyword=keyword)
 

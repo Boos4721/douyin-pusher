@@ -701,3 +701,136 @@ class PlaywrightClient:
 
             finally:
                 await browser.close()
+
+    # ------------------------------------------------------------------
+    # Interactions (like / comment / favorite / follow)
+    # ------------------------------------------------------------------
+
+    def interact(self, aweme_id: str, action: str, **kwargs) -> dict:
+        """
+        在 douyin.com 视频页面执行互动操作。
+
+        action: "like" | "unlike" | "favorite" | "unfavorite" | "comment" | "follow" | "unfollow"
+        kwargs: content (for comment), sec_user_id (for follow)
+        """
+        if not self.cookie_exists():
+            raise PlaywrightError("未登录，请先运行: dy login")
+        return _run_async(self._interact_async(aweme_id, action, **kwargs))
+
+    async def _interact_async(self, aweme_id: str, action: str, **kwargs) -> dict:
+        from playwright.async_api import async_playwright
+        async with async_playwright() as pw:
+            browser = await pw.chromium.launch(headless=True)
+            context = await browser.new_context(
+                storage_state=self.cookie_file,
+                viewport={"width": 1920, "height": 1080},
+            )
+            page = await context.new_page()
+
+            try:
+                if action in ("follow", "unfollow"):
+                    return await self._do_follow(page, kwargs.get("sec_user_id", aweme_id), action)
+
+                # Navigate to video page
+                url = f"https://www.douyin.com/video/{aweme_id}"
+                await page.goto(url, wait_until="domcontentloaded")
+                await page.wait_for_timeout(5000)
+                # Wait for action buttons to load
+                for _ in range(10):
+                    if await page.locator('[data-e2e="video-player-digg"]').count() > 0:
+                        break
+                    await page.wait_for_timeout(1000)
+
+                if action == "like":
+                    return await self._do_like(page, aweme_id)
+                elif action == "unlike":
+                    return await self._do_like(page, aweme_id, undo=True)
+                elif action == "favorite":
+                    return await self._do_favorite(page, aweme_id)
+                elif action == "unfavorite":
+                    return await self._do_favorite(page, aweme_id, undo=True)
+                elif action == "comment":
+                    return await self._do_comment(page, aweme_id, kwargs.get("content", ""))
+                else:
+                    raise PlaywrightError(f"未知操作: {action}")
+
+            finally:
+                await context.storage_state(path=self.cookie_file)
+                await browser.close()
+
+    async def _do_like(self, page, aweme_id: str, undo: bool = False) -> dict:
+        """点赞/取消点赞 — JS 直接点击，绕过可见性检查。"""
+        clicked = await page.evaluate("""() => {
+            const el = document.querySelector('[data-e2e="video-player-digg"]');
+            if (el) { el.click(); return true; }
+            return false;
+        }""")
+        await page.wait_for_timeout(1500)
+        return {"action": "unlike" if undo else "like", "aweme_id": aweme_id, "success": clicked}
+
+    async def _do_favorite(self, page, aweme_id: str, undo: bool = False) -> dict:
+        """收藏/取消收藏 — JS 直接点击。"""
+        clicked = await page.evaluate("""() => {
+            const el = document.querySelector('[data-e2e="video-player-collect"]');
+            if (el) { el.click(); return true; }
+            return false;
+        }""")
+        await page.wait_for_timeout(1500)
+        return {"action": "unfavorite" if undo else "favorite", "aweme_id": aweme_id, "success": clicked}
+
+    async def _do_comment(self, page, aweme_id: str, content: str) -> dict:
+        """发表评论。"""
+        if not content:
+            raise PlaywrightError("评论内容不能为空")
+
+        commented = False
+        # Click comment icon to focus the input area
+        comment_icon = page.locator('[data-e2e="feed-comment-icon"]')
+        if await comment_icon.count() > 0:
+            await comment_icon.first.click()
+            await page.wait_for_timeout(1000)
+
+        # Find comment input (contenteditable or textarea)
+        input_sel = page.locator(
+            '[data-e2e="comment-input"], '
+            '[class*="comment"] [contenteditable="true"], '
+            '[placeholder*="善语结善缘"], [placeholder*="说点什么"]'
+        )
+        if await input_sel.count() > 0:
+            await input_sel.first.click()
+            await page.wait_for_timeout(500)
+            await page.keyboard.type(content, delay=30)
+            await page.wait_for_timeout(500)
+
+            # Submit
+            send = page.locator(
+                '[data-e2e="comment-post"], '
+                'button:has-text("发布")'
+            ).last
+            if await send.count() > 0:
+                await send.click()
+                commented = True
+            else:
+                await page.keyboard.press("Enter")
+                commented = True
+
+        await page.wait_for_timeout(2000)
+        return {"action": "comment", "aweme_id": aweme_id, "content": content, "success": commented}
+
+    async def _do_follow(self, page, sec_user_id: str, action: str) -> dict:
+        """关注/取消关注用户。"""
+        await page.goto(f"https://www.douyin.com/user/{sec_user_id}", wait_until="domcontentloaded")
+        await page.wait_for_timeout(4000)
+
+        if action == "follow":
+            btn = page.locator('[data-e2e="user-info-follow"], button:has-text("关注")')
+        else:
+            btn = page.locator('button:has-text("已关注"), button:has-text("互相关注")')
+
+        clicked = False
+        if await btn.count() > 0:
+            await btn.first.click()
+            clicked = True
+            await page.wait_for_timeout(1500)
+
+        return {"action": action, "sec_user_id": sec_user_id, "success": clicked}
