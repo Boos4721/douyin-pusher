@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any
 
 from dy_cli.utils.config import CONFIG_DIR
 
@@ -42,7 +41,7 @@ def get_by_index(index: int) -> dict[str, str] | None:
     if not os.path.isfile(INDEX_FILE):
         return None
     try:
-        with open(INDEX_FILE, "r", encoding="utf-8") as f:
+        with open(INDEX_FILE, encoding="utf-8") as f:
             data = json.load(f)
         if not isinstance(data, list) or index > len(data):
             return None
@@ -76,7 +75,7 @@ def get_index_count() -> int:
     if not os.path.isfile(INDEX_FILE):
         return 0
     try:
-        with open(INDEX_FILE, "r", encoding="utf-8") as f:
+        with open(INDEX_FILE, encoding="utf-8") as f:
             data = json.load(f)
         return len(data) if isinstance(data, list) else 0
     except (json.JSONDecodeError, OSError):

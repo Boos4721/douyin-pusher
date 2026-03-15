@@ -4,14 +4,14 @@ dy live — 直播相关命令（抖音特色功能）。
 from __future__ import annotations
 
 import os
-import subprocess
 import shutil
+import subprocess
 
 import click
 
 from dy_cli.engines.api_client import DouyinAPIClient, DouyinAPIError
 from dy_cli.utils import config
-from dy_cli.utils.output import success, error, info, warning, console, print_json, print_live_info
+from dy_cli.utils.output import console, error, info, print_json, print_live_info, success, warning
 
 
 @click.group("live", help="📺 直播功能 (查看/录制)")

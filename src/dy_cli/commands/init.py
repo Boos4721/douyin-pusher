@@ -6,15 +6,14 @@ dy init — 新用户引导式初始化。
 from __future__ import annotations
 
 import os
-import sys
-import shutil
 import subprocess
+import sys
 
 import click
 from rich.panel import Panel
 
 from dy_cli.utils import config
-from dy_cli.utils.output import success, error, info, warning, console, status
+from dy_cli.utils.output import console, error, info, status, success, warning
 
 
 @click.command("init", help="🚀 初始化设置 (新用户从这里开始)")

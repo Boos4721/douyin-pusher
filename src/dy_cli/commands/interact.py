@@ -7,7 +7,7 @@ import click
 
 from dy_cli.engines.playwright_client import PlaywrightClient, PlaywrightError
 from dy_cli.utils.index_cache import resolve_id
-from dy_cli.utils.output import success, error, info, console, print_comments
+from dy_cli.utils.output import error, info, print_comments, success
 
 
 def _resolve(id_str: str) -> str:

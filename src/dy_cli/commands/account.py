@@ -6,12 +6,12 @@ from __future__ import annotations
 import os
 
 import click
-from rich.table import Table
 from rich import box
+from rich.table import Table
 
 from dy_cli.engines.playwright_client import PlaywrightClient
 from dy_cli.utils import config
-from dy_cli.utils.output import success, error, info, console
+from dy_cli.utils.output import console, error, info, success
 
 
 @click.group("account", help="多账号管理")

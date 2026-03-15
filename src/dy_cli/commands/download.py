@@ -7,12 +7,12 @@ import os
 import re
 
 import click
-from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, DownloadColumn, TransferSpeedColumn
+from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TextColumn, TransferSpeedColumn
 
 from dy_cli.engines.api_client import DouyinAPIClient, DouyinAPIError
 from dy_cli.utils import config
 from dy_cli.utils.index_cache import resolve_id
-from dy_cli.utils.output import success, error, info, warning, console
+from dy_cli.utils.output import console, error, info, success, warning
 
 
 @click.command("download", help="下载抖音视频/图片 (无水印, 支持短索引/批量)")
@@ -83,7 +83,7 @@ def download(url_or_id, output_dir, music, limit, user, account, as_json):
         video_url = dl_info.get("video_url")
         if video_url:
             video_path = os.path.join(output_dir, f"{prefix}.mp4")
-            info(f"正在下载视频...")
+            info("正在下载视频...")
             _download_with_progress(client, video_url, video_path)
             downloaded_files.append(video_path)
 
@@ -101,7 +101,7 @@ def download(url_or_id, output_dir, music, limit, user, account, as_json):
             music_url = dl_info.get("music_url")
             if music_url:
                 music_path = os.path.join(output_dir, f"{prefix}_music.mp3")
-                info(f"正在下载音乐...")
+                info("正在下载音乐...")
                 _download_with_progress(client, music_url, music_path)
                 downloaded_files.append(music_path)
             else:

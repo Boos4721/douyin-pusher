@@ -6,7 +6,7 @@ from __future__ import annotations
 import click
 
 from dy_cli.utils import config
-from dy_cli.utils.output import success, error, info, console, print_json
+from dy_cli.utils.output import console, error, info, print_json, success
 
 
 @click.group("config", help="配置管理")

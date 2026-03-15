@@ -12,20 +12,17 @@ import os
 import random
 import re
 import time
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
 logger = logging.getLogger(__name__)
 
+from dy_cli.utils import config
 from dy_cli.utils.signature import (
     get_base_params,
     get_headers,
-    get_ms_token,
-    build_request_url,
 )
-from dy_cli.utils import config
-
 
 # ------------------------------------------------------------------
 # Constants
@@ -236,14 +233,14 @@ class DouyinAPIClient:
     # ------------------------------------------------------------------
 
     @classmethod
-    def from_config(cls, account: str | None = None) -> "DouyinAPIClient":
+    def from_config(cls, account: str | None = None) -> DouyinAPIClient:
         """从配置文件创建客户端。"""
         cfg = config.load_config()
         cookie_file = config.get_cookie_file(account)
         cookie = ""
         if os.path.exists(cookie_file):
             try:
-                with open(cookie_file, "r", encoding="utf-8") as f:
+                with open(cookie_file, encoding="utf-8") as f:
                     cookie_data = json.load(f)
                 # Support playwright storage_state format
                 if isinstance(cookie_data, dict) and "cookies" in cookie_data:

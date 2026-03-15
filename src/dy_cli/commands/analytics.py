@@ -3,16 +3,18 @@ dy analytics / notifications — 数据分析命令 (Playwright)。
 """
 from __future__ import annotations
 
-import json
-import os
-
 import click
 
 from dy_cli.engines.playwright_client import PlaywrightClient, PlaywrightError
 from dy_cli.utils import config
 from dy_cli.utils.output import (
-    success, error, info, warning, console,
-    print_analytics, print_json,
+    console,
+    error,
+    info,
+    print_analytics,
+    print_json,
+    success,
+    warning,
 )
 
 
@@ -23,7 +25,7 @@ from dy_cli.utils.output import (
 @click.option("--json-output", "as_json", is_flag=True, help="输出 JSON")
 def analytics(csv_file, page_size, account, as_json):
     """获取创作者数据看板 (Playwright 引擎)。"""
-    cfg = config.load_config()
+    config.load_config()
     client = PlaywrightClient(
         account=account,
         headless=True,
@@ -67,7 +69,7 @@ def analytics(csv_file, page_size, account, as_json):
 @click.option("--json-output", "as_json", is_flag=True, help="输出 JSON")
 def notifications(account, as_json):
     """获取通知消息 (Playwright 引擎)。"""
-    cfg = config.load_config()
+    config.load_config()
     client = PlaywrightClient(
         account=account,
         headless=True,
@@ -93,8 +95,8 @@ def notifications(account, as_json):
 
 def _print_notifications(data: dict):
     """格式化输出通知。"""
-    from rich.table import Table
     from rich import box
+    from rich.table import Table
 
     mentions = data.get("mentions", [])
     if not mentions:

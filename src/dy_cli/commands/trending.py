@@ -9,7 +9,7 @@ import click
 
 from dy_cli.engines.api_client import DouyinAPIClient, DouyinAPIError
 from dy_cli.utils.export import export_data
-from dy_cli.utils.output import success, error, info, warning, console, print_trending, print_json
+from dy_cli.utils.output import console, error, info, print_json, print_trending, warning
 
 
 @click.command("trending", help="🔥 抖音热榜")

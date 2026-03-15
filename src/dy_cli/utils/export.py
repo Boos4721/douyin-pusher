@@ -8,7 +8,7 @@ import json
 import os
 from typing import Any
 
-from dy_cli.utils.output import success, info
+from dy_cli.utils.output import success
 
 
 def export_data(data: list[dict], output_path: str) -> None:

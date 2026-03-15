@@ -7,10 +7,14 @@ import click
 
 from dy_cli.engines.api_client import DouyinAPIClient, DouyinAPIError
 from dy_cli.engines.playwright_client import PlaywrightClient, PlaywrightError
-from dy_cli.utils import config
 from dy_cli.utils.output import (
-    success, error, info, console,
-    print_user_profile, print_json, print_videos,
+    console,
+    error,
+    info,
+    print_json,
+    print_user_profile,
+    print_videos,
+    success,
 )
 
 
@@ -50,7 +54,7 @@ def profile(sec_user_id, posts, post_count, account, as_json):
     client = DouyinAPIClient.from_config(account)
 
     try:
-        info(f"正在获取用户资料...")
+        info("正在获取用户资料...")
         user = client.get_user_profile(sec_user_id)
 
         if as_json and not posts:

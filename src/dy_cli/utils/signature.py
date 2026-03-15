@@ -7,14 +7,9 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import json
 import random
 import string
-import time
-from typing import Any
 from urllib.parse import urlencode
-
 
 # ------------------------------------------------------------------
 # 基础参数生成（不需要 JS 签名的请求）

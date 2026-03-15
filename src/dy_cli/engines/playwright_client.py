@@ -7,12 +7,8 @@ Playwright Client — 浏览器自动化引擎。
 from __future__ import annotations
 
 import asyncio
-import json
 import os
-import sys
-import time
 from datetime import datetime
-from typing import Any, Optional
 
 from dy_cli.utils import config
 
@@ -557,7 +553,7 @@ class PlaywrightClient:
                     await time_input.fill(date_str)
                     await page.keyboard.press("Enter")
         except Exception:
-            print(f"[dy] 定时发布设置失败，将立即发布")
+            print("[dy] 定时发布设置失败，将立即发布")
 
     # ------------------------------------------------------------------
     # Analytics

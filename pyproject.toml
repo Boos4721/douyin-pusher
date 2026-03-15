@@ -36,5 +36,19 @@ Homepage = "https://github.com/Youhai020616/douyin"
 Repository = "https://github.com/Youhai020616/douyin"
 Issues = "https://github.com/Youhai020616/douyin/issues"
 
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E402", "E501"]  # E402: imports after click group; E501: long lines in UA/JS strings
+
+[tool.ruff.lint.per-file-ignores]
+"src/dy_cli/commands/init.py" = ["F401"]  # playwright import for availability check
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/dy_cli", "scripts"]

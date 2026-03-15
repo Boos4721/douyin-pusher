@@ -3,18 +3,20 @@ dy search / detail — 搜索和详情命令。
 """
 from __future__ import annotations
 
-import json
-
 import click
 
 from dy_cli.engines.api_client import DouyinAPIClient, DouyinAPIError
-from dy_cli.utils.index_cache import save_index, resolve_id
 from dy_cli.utils.export import export_data
+from dy_cli.utils.index_cache import resolve_id, save_index
 from dy_cli.utils.output import (
-    success, error, info, warning, console,
-    print_videos, print_json, print_video_detail, print_comments,
+    error,
+    info,
+    print_comments,
+    print_json,
+    print_video_detail,
+    print_videos,
+    warning,
 )
-
 
 SORT_MAP = {
     "综合": 0,

@@ -14,7 +14,7 @@ import click
 
 from dy_cli.engines.playwright_client import PlaywrightClient, PlaywrightError
 from dy_cli.utils import config
-from dy_cli.utils.output import success, error, info, warning, status, console
+from dy_cli.utils.output import console, error, info, status, success, warning
 
 
 def _extract_browser_cookies(account: str | None = None) -> bool:

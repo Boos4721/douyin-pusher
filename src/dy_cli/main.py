@@ -30,13 +30,12 @@ import click
 
 from dy_cli import __version__
 
-
-BANNER = r"""
+BANNER = rf"""
   ╔═══════════════════════════════╗
-  ║   🎬 dy-cli v{version}         ║
+  ║   🎬 dy-cli v{__version__}         ║
   ║   抖音命令行工具              ║
   ╚═══════════════════════════════╝
-""".format(version=__version__)
+"""
 
 
 class AliasGroup(click.Group):
@@ -80,29 +79,35 @@ def cli(ctx):
 
 # 初始化
 from dy_cli.commands.init import init
+
 cli.add_command(init)
 
 # 认证
-from dy_cli.commands.auth import login, logout, auth_status
+from dy_cli.commands.auth import auth_status, login, logout
+
 cli.add_command(login)
 cli.add_command(logout)
 cli.add_command(auth_status, "status")
 
 # 搜索 & 详情
-from dy_cli.commands.search import search, detail
+from dy_cli.commands.search import detail, search
+
 cli.add_command(search)
 cli.add_command(detail)
 
 # 下载
 from dy_cli.commands.download import download
+
 cli.add_command(download)
 
 # 发布
 from dy_cli.commands.publish import publish
+
 cli.add_command(publish)
 
 # 互动
-from dy_cli.commands.interact import like, favorite, comment, comments, follow
+from dy_cli.commands.interact import comment, comments, favorite, follow, like
+
 cli.add_command(like)
 cli.add_command(favorite)
 cli.add_command(comment)
@@ -111,28 +116,34 @@ cli.add_command(follow)
 
 # 热榜
 from dy_cli.commands.trending import trending
+
 cli.add_command(trending)
 
 # 直播
 from dy_cli.commands.live import live_group
+
 cli.add_command(live_group, "live")
 
 # 数据分析
 from dy_cli.commands.analytics import analytics, notifications
+
 cli.add_command(analytics)
 cli.add_command(notifications)
 
 # 用户
 from dy_cli.commands.profile import me, profile
+
 cli.add_command(me)
 cli.add_command(profile)
 
 # 账号管理
 from dy_cli.commands.account import account_group
+
 cli.add_command(account_group, "account")
 
 # 配置管理
 from dy_cli.commands.config_cmd import config_group
+
 cli.add_command(config_group, "config")
 
 

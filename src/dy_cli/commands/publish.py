@@ -9,7 +9,7 @@ import click
 
 from dy_cli.engines.playwright_client import PlaywrightClient, PlaywrightError
 from dy_cli.utils import config
-from dy_cli.utils.output import success, error, info, warning, console
+from dy_cli.utils.output import console, error, info, success
 
 
 @click.command("publish", help="发布视频或图文到抖音")
@@ -31,7 +31,7 @@ def publish(title, content, content_file, video, images, tags, visibility, sched
 
     # Handle content
     if content_file:
-        with open(content_file, "r", encoding="utf-8") as f:
+        with open(content_file, encoding="utf-8") as f:
             content = f.read().strip()
     if not content:
         content = ""
@@ -95,7 +95,7 @@ def publish(title, content, content_file, video, images, tags, visibility, sched
     try:
         if video:
             info(f"正在发布视频: {os.path.basename(video)}")
-            result = client.publish_video(
+            client.publish_video(
                 title=title,
                 content=content,
                 video_path=os.path.abspath(video),
@@ -106,7 +106,7 @@ def publish(title, content, content_file, video, images, tags, visibility, sched
             )
         else:
             info(f"正在发布图文 ({len(images)} 张图片)")
-            result = client.publish_image_text(
+            client.publish_image_text(
                 title=title,
                 content=content,
                 images=[os.path.abspath(img) if not img.startswith("http") else img for img in images],
