@@ -274,15 +274,52 @@ class PlaywrightClient:
                     except Exception:
                         pass
 
-                # Click publish button
+                # Handle cover (required by Douyin)
+                await self._select_cover(page)
+
+                # Handle visibility
+                if visibility == "私密" or visibility == "仅自己可见":
+                    try:
+                        private_opt = page.locator('text=仅自己可见').first
+                        if await private_opt.count() > 0:
+                            await private_opt.click(force=True)
+                    except Exception:
+                        pass
+
+                # Click the EXACT "发布" button (not "高清发布")
                 await page.wait_for_timeout(2000)
-                publish_btn = page.locator('button:has-text("发布")').first
-                try:
-                    await publish_btn.wait_for(timeout=10000)
-                    await publish_btn.click()
+                published = await page.evaluate("""() => {
+                    const btns = document.querySelectorAll('button');
+                    for (const b of btns) {
+                        if (b.textContent.trim() === '发布' && !b.disabled) {
+                            b.click();
+                            return true;
+                        }
+                    }
+                    return false;
+                }""")
+
+                if published:
                     await page.wait_for_timeout(5000)
-                    print("[dy] 发布请求已提交")
-                except Exception:
+                    # Check for error toast
+                    toast = await page.evaluate(
+                        '()=>Array.from(document.querySelectorAll("[class*=toast]"))'
+                        '.map(t=>t.textContent.trim()).filter(Boolean)'
+                    )
+                    if toast and "封面" in str(toast):
+                        print("[dy] 封面设置失败，请手动设置封面后发布")
+                    elif toast and "成功" in str(toast):
+                        print("[dy] 发布成功!")
+                    else:
+                        # Wait for navigation to manage page
+                        for _ in range(15):
+                            await page.wait_for_timeout(2000)
+                            if "manage" in page.url:
+                                print("[dy] 发布成功!")
+                                break
+                        else:
+                            print("[dy] 发布请求已提交")
+                else:
                     print("[dy] 未找到发布按钮，内容已填写，请手动确认")
                     if not self.headless:
                         await page.wait_for_timeout(30000)
@@ -292,6 +329,56 @@ class PlaywrightClient:
             finally:
                 await context.storage_state(path=self.cookie_file)
                 await browser.close()
+
+    async def _select_cover(self, page):
+        """选择视频封面（必填项）。"""
+        try:
+            # Dismiss any overlay guides
+            await page.evaluate(
+                '()=>document.querySelectorAll("[class*=shepherd]").forEach(e=>e.remove())'
+            )
+
+            # Wait for AI cover generation
+            for _ in range(15):
+                await page.wait_for_timeout(1000)
+                if await page.locator('text=生成中').count() == 0:
+                    break
+
+            # Click the cover area to open cover editor
+            cover_divs = await page.evaluate("""() => {
+                const els = document.querySelectorAll('[class*="cover"]');
+                for (const el of els) {
+                    const r = el.getBoundingClientRect();
+                    if (r.width > 100 && r.height > 80 && r.width < 300 &&
+                        el.textContent.includes('选择封面') && el.onclick !== undefined) {
+                        return {x: r.x + r.width/2, y: r.y + r.height/2};
+                    }
+                }
+                // Fallback: find by text
+                const all = document.querySelectorAll('div');
+                for (const el of all) {
+                    const r = el.getBoundingClientRect();
+                    if (el.textContent.trim() === '选择封面' && r.width > 50 && r.height > 50) {
+                        return {x: r.x + r.width/2, y: r.y + r.height/2};
+                    }
+                }
+                return null;
+            }""")
+
+            if cover_divs:
+                await page.mouse.click(int(cover_divs["x"]), int(cover_divs["y"]))
+                await page.wait_for_timeout(5000)
+
+                # Click "完成" in cover editor to accept default frame
+                done_btn = page.get_by_role("button", name="完成")
+                if await done_btn.count() > 0:
+                    await done_btn.last.click(force=True)
+                    await page.wait_for_timeout(2000)
+                    print("[dy] 封面已设置")
+            else:
+                print("[dy] 未找到封面选择区域")
+        except Exception as e:
+            print(f"[dy] 封面设置跳过: {e}")
 
     # ------------------------------------------------------------------
     # Publish image/text
@@ -395,13 +482,9 @@ class PlaywrightClient:
                 # Handle visibility
                 if visibility == "私密" or visibility == "仅自己可见":
                     try:
-                        perm_btn = page.locator('text=谁可以看').first
-                        if await perm_btn.count() > 0:
-                            await perm_btn.click()
-                            await page.wait_for_timeout(500)
-                            private_opt = page.locator('text=仅自己可见').first
-                            if await private_opt.count() > 0:
-                                await private_opt.click()
+                        private_opt = page.locator('text=仅自己可见').first
+                        if await private_opt.count() > 0:
+                            await private_opt.click(force=True)
                     except Exception:
                         pass
 
@@ -409,15 +492,23 @@ class PlaywrightClient:
                 if schedule_at:
                     await self._set_schedule_time(page, schedule_at)
 
-                # Click publish
+                # Click the EXACT "发布" button (not "高清发布")
                 await page.wait_for_timeout(2000)
-                publish_btn = page.locator('button:has-text("发布")').first
-                try:
-                    await publish_btn.wait_for(timeout=10000)
-                    await publish_btn.click()
+                published = await page.evaluate("""() => {
+                    const btns = document.querySelectorAll('button');
+                    for (const b of btns) {
+                        if (b.textContent.trim() === '发布' && !b.disabled) {
+                            b.click();
+                            return true;
+                        }
+                    }
+                    return false;
+                }""")
+
+                if published:
                     await page.wait_for_timeout(5000)
                     print("[dy] 发布请求已提交")
-                except Exception:
+                else:
                     print("[dy] 未找到发布按钮，内容已填写，请手动确认")
                     if not self.headless:
                         await page.wait_for_timeout(30000)
