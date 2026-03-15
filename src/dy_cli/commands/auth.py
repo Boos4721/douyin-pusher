@@ -1,7 +1,14 @@
 """
 dy login / logout / status — 认证命令。
+
+支持两种登录方式:
+1. 浏览器 Cookie 自动提取 (默认, 零摩擦)
+2. Playwright 扫码 (--qrcode)
 """
 from __future__ import annotations
+
+import json
+import os
 
 import click
 
@@ -10,26 +17,77 @@ from dy_cli.utils import config
 from dy_cli.utils.output import success, error, info, warning, status, console
 
 
-@click.command("login", help="登录抖音 (浏览器扫码)")
-@click.option("--account", default=None, help="账号名")
-def login(account):
-    """打开浏览器扫码登录抖音。"""
-    cfg = config.load_config()
-    client = PlaywrightClient(
-        account=account,
-        headless=False,
-        slow_mo=cfg["playwright"].get("slow_mo", 0),
-    )
+def _extract_browser_cookies(account: str | None = None) -> bool:
+    """从浏览器自动提取抖音 Cookie。"""
+    try:
+        import browser_cookie3 as bc3
+    except ImportError:
+        return False
 
-    # Check if already logged in
+    browsers = ["chrome", "firefox", "edge", "brave", "opera", "chromium", "safari"]
+    for browser_name in browsers:
+        loader = getattr(bc3, browser_name, None)
+        if not loader:
+            continue
+        try:
+            jar = loader(domain_name=".douyin.com")
+            cookies = {c.name: c.value for c in jar if "douyin" in (c.domain or "")}
+            if cookies and any(k in cookies for k in ("sessionid", "passport_csrf_token", "ttwid")):
+                # Save as playwright storage_state format
+                cookie_file = config.get_cookie_file(account)
+                os.makedirs(os.path.dirname(cookie_file), exist_ok=True)
+                storage = {
+                    "cookies": [
+                        {"name": k, "value": v, "domain": ".douyin.com", "path": "/"}
+                        for k, v in cookies.items()
+                    ],
+                    "origins": [],
+                }
+                with open(cookie_file, "w", encoding="utf-8") as f:
+                    json.dump(storage, f, ensure_ascii=False, indent=2)
+                info(f"从 {browser_name} 提取了 {len(cookies)} 个 cookie")
+                return True
+        except Exception:
+            continue
+    return False
+
+
+@click.command("login", help="登录抖音 (自动提取浏览器 Cookie 或扫码)")
+@click.option("--account", default=None, help="账号名")
+@click.option("--qrcode", is_flag=True, help="强制使用扫码登录 (Playwright)")
+@click.option("--cookie-source", default="auto", help="指定浏览器 (chrome/firefox/safari/auto)")
+def login(account, qrcode, cookie_source):
+    """登录抖音。默认从浏览器提取 Cookie，--qrcode 使用扫码。"""
+    cfg = config.load_config()
+
+    # 已登录检查
+    client = PlaywrightClient(account=account, headless=True)
     if client.cookie_exists() and client.check_login():
         success("已登录抖音")
         if not click.confirm("是否重新登录?", default=False):
             return
 
+    # 方式 1: 从浏览器自动提取 Cookie (无需打开浏览器)
+    if not qrcode:
+        info("正在从浏览器提取 Cookie...")
+        if _extract_browser_cookies(account):
+            # Verify
+            client2 = PlaywrightClient(account=account, headless=True)
+            if client2.check_login():
+                success("登录成功! 🎉 (从浏览器提取)")
+                return
+            else:
+                warning("提取的 Cookie 无效，切换到扫码模式")
+
+    # 方式 2: Playwright 扫码
     info("正在打开浏览器，请使用抖音 App 扫码...")
+    pw_client = PlaywrightClient(
+        account=account,
+        headless=False,
+        slow_mo=cfg["playwright"].get("slow_mo", 0),
+    )
     try:
-        ok = client.login()
+        ok = pw_client.login()
         if ok:
             success("登录成功! 🎉")
         else:

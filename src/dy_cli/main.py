@@ -47,6 +47,8 @@ class AliasGroup(click.Group):
         "s": "search",
         "dl": "download",
         "t": "trending",
+        "r": "detail",
+        "read": "detail",
         "fav": "favorite",
         "noti": "notifications",
         "stat": "status",

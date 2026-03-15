@@ -11,10 +11,11 @@ from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, Downlo
 
 from dy_cli.engines.api_client import DouyinAPIClient, DouyinAPIError
 from dy_cli.utils import config
+from dy_cli.utils.index_cache import resolve_id
 from dy_cli.utils.output import success, error, info, warning, console
 
 
-@click.command("download", help="下载抖音视频/图片 (无水印)")
+@click.command("download", help="下载抖音视频/图片 (无水印, 支持短索引: dy dl 1)")
 @click.argument("url_or_id")
 @click.option("--output-dir", "-o", default=None, help="保存目录 (默认 ~/Downloads/douyin)")
 @click.option("--music", is_flag=True, help="同时下载背景音乐")
@@ -22,9 +23,10 @@ from dy_cli.utils.output import success, error, info, warning, console
 @click.option("--json-output", "as_json", is_flag=True, help="仅输出下载链接 (JSON)")
 def download(url_or_id, output_dir, music, account, as_json):
     """
-    下载抖音视频/图片（无水印）。
+    下载抖音视频/图片（无水印）。支持短索引 (dy search → dy dl 1)。
 
     支持:
+    - 短索引: dy dl 1 (引用上次搜索的第 1 条)
     - 分享链接: https://v.douyin.com/xxxxx/
     - 完整链接: https://www.douyin.com/video/1234567890
     - 视频 ID: 1234567890
@@ -36,7 +38,8 @@ def download(url_or_id, output_dir, music, account, as_json):
     client = DouyinAPIClient.from_config(account)
 
     try:
-        # Resolve aweme_id
+        # Resolve aweme_id (支持短索引)
+        url_or_id = resolve_id(url_or_id)
         if url_or_id.isdigit():
             aweme_id = url_or_id
         else:

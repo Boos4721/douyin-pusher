@@ -7,12 +7,16 @@ Douyin API Client — 逆向 API 采集客户端。
 from __future__ import annotations
 
 import json
+import logging
 import os
+import random
 import re
 import time
 from typing import Any, Optional
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 from dy_cli.utils.signature import (
     get_base_params,
@@ -77,6 +81,11 @@ class DouyinAPIClient:
         self.proxy = proxy
         self.timeout = timeout
         self._client: httpx.Client | None = None
+        self._last_request_time: float = 0.0
+        self._request_delay: float = 1.0
+        self._base_delay: float = 1.0
+        self._verify_count: int = 0
+        self._max_retries: int = 3
 
     # ------------------------------------------------------------------
     # HTTP client
@@ -115,35 +124,107 @@ class DouyinAPIClient:
         except Exception:
             pass
 
+    # ------------------------------------------------------------------
+    # Rate limiting & anti-detection
+    # ------------------------------------------------------------------
+
+    def _rate_limit_delay(self) -> None:
+        """高斯抖动延迟，模拟人类浏览节奏。"""
+        if self._request_delay <= 0:
+            return
+        elapsed = time.time() - self._last_request_time
+        if elapsed < self._request_delay:
+            jitter = max(0, random.gauss(0.3, 0.15))
+            # 5% 概率增加长停顿（模拟阅读行为）
+            if random.random() < 0.05:
+                jitter += random.uniform(2.0, 5.0)
+            sleep_time = self._request_delay - elapsed + jitter
+            logger.debug("Rate-limit delay: %.2fs", sleep_time)
+            time.sleep(sleep_time)
+
+    def _handle_verify(self, resp: httpx.Response) -> None:
+        """验证码冷却：渐进式退避。"""
+        self._verify_count += 1
+        cooldown = min(30, 5 * (2 ** (self._verify_count - 1)))
+        logger.warning("Verify triggered (count=%d), cooldown %.0fs", self._verify_count, cooldown)
+        self._request_delay = max(self._request_delay, self._base_delay * 2)
+        time.sleep(cooldown)
+
+    def _request_with_retry(self, method: str, url: str, **kwargs) -> httpx.Response:
+        """带重试和退避的请求。"""
+        self._rate_limit_delay()
+        last_exc: Exception | None = None
+
+        for attempt in range(self._max_retries):
+            try:
+                resp = self.client.request(method, url, **kwargs)
+                self._last_request_time = time.time()
+
+                # 重试: 429 / 5xx
+                if resp.status_code in (429, 500, 502, 503, 504):
+                    wait = (2 ** attempt) + random.uniform(0, 1)
+                    logger.warning("HTTP %d, retry in %.1fs (%d/%d)", resp.status_code, wait, attempt + 1, self._max_retries)
+                    time.sleep(wait)
+                    continue
+
+                self._verify_count = 0
+                return resp
+
+            except (httpx.TimeoutException, httpx.NetworkError) as exc:
+                last_exc = exc
+                wait = (2 ** attempt) + random.uniform(0, 1)
+                logger.warning("Network error: %s, retry in %.1fs (%d/%d)", exc, wait, attempt + 1, self._max_retries)
+                time.sleep(wait)
+
+        if last_exc:
+            raise DouyinAPIError(f"请求失败 ({self._max_retries} 次重试后): {last_exc}") from last_exc
+        raise DouyinAPIError(f"请求失败: HTTP {resp.status_code}")
+
+    # ------------------------------------------------------------------
+    # HTTP methods
+    # ------------------------------------------------------------------
+
     def _get(self, url: str, params: dict | None = None, **kwargs) -> dict:
-        """发起 GET 请求并返回 JSON。"""
+        """GET 请求，带重试和反爬。"""
         headers = get_headers(cookie=self.cookie)
+        resp = self._request_with_retry("GET", url, params=params, headers=headers, **kwargs)
+
         try:
-            resp = self.client.get(url, params=params, headers=headers, **kwargs)
             resp.raise_for_status()
-            if not resp.content:
-                raise DouyinAPIError(f"空响应 (可能需要登录或签名): {url.split('/')[-2]}")
-            data = resp.json()
-            return data
         except httpx.HTTPStatusError as e:
             raise DouyinAPIError(f"HTTP {e.response.status_code}: {url}") from e
-        except httpx.RequestError as e:
-            raise DouyinAPIError(f"请求失败: {e}") from e
+
+        if not resp.content:
+            raise DouyinAPIError(f"空响应 (可能需要登录或签名): {url.split('/')[-2]}")
+
+        try:
+            data = resp.json()
         except json.JSONDecodeError as e:
             raise DouyinAPIError(f"JSON 解析失败: {e}") from e
 
+        # 检测 verify_check — 只记录，不重试（避免死循环）
+        nil_info = data.get("search_nil_info", {})
+        if nil_info.get("search_nil_type") == "verify_check":
+            self._verify_count += 1
+            logger.warning("verify_check detected (count=%d)", self._verify_count)
+
+        return data
+
     def _post(self, url: str, data: dict | None = None, **kwargs) -> dict:
-        """发起 POST 请求并返回 JSON。"""
+        """POST 请求，带重试和反爬。"""
         headers = get_headers(cookie=self.cookie)
         headers["Content-Type"] = "application/x-www-form-urlencoded"
+        resp = self._request_with_retry("POST", url, data=data, headers=headers, **kwargs)
+
         try:
-            resp = self.client.post(url, data=data, headers=headers, **kwargs)
             resp.raise_for_status()
-            return resp.json()
         except httpx.HTTPStatusError as e:
             raise DouyinAPIError(f"HTTP {e.response.status_code}: {url}") from e
-        except httpx.RequestError as e:
-            raise DouyinAPIError(f"请求失败: {e}") from e
+
+        try:
+            return resp.json()
+        except json.JSONDecodeError as e:
+            raise DouyinAPIError(f"JSON 解析失败: {e}") from e
 
     def close(self):
         if self._client:

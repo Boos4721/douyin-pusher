@@ -8,6 +8,7 @@ import json
 import click
 
 from dy_cli.engines.api_client import DouyinAPIClient, DouyinAPIError
+from dy_cli.utils.index_cache import save_index, resolve_id
 from dy_cli.utils.output import (
     success, error, info, warning, console,
     print_videos, print_json, print_video_detail, print_comments,
@@ -70,17 +71,21 @@ def search(keyword, sort, pub_time, search_type, count, account, as_json):
         if aweme_info:
             videos.append(aweme_info)
 
+    # 缓存索引 — 支持 dy read 1 / dy download 3
+    save_index(videos)
+
     print_videos(videos, keyword=keyword)
 
 
-@click.command("detail", help="查看视频详情")
+@click.command("detail", help="查看视频详情 (支持短索引: dy detail 1)")
 @click.argument("aweme_id")
 @click.option("--comments", is_flag=True, help="同时加载评论")
 @click.option("--comment-count", type=int, default=20, help="评论数量 (默认 20)")
 @click.option("--account", default=None, help="使用指定账号")
 @click.option("--json-output", "as_json", is_flag=True, help="输出 JSON")
 def detail(aweme_id, comments, comment_count, account, as_json):
-    """查看视频详情和评论。"""
+    """查看视频详情和评论。支持短索引 (dy search → dy detail 1)。"""
+    aweme_id = resolve_id(aweme_id)
     client = DouyinAPIClient.from_config(account)
 
     try:
