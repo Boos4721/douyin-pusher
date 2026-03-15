@@ -43,8 +43,11 @@ def status(label: str, value: str, style: str = ""):
         console.print(f"  [bold]{label}:[/] {value}")
 
 
-def print_json(data: Any):
-    console.print_json(json.dumps(data, ensure_ascii=False, indent=2))
+def print_json(data: Any, envelope: bool = True):
+    """输出 JSON。envelope=True 时包裹在统一信封中。"""
+    from dy_cli.utils.envelope import success_envelope
+    output = success_envelope(data) if envelope else data
+    console.print_json(json.dumps(output, ensure_ascii=False, indent=2))
 
 
 def print_table(

@@ -39,3 +39,4 @@ downloads/
 
 # Config (user-specific)
 config/accounts.json
+dist/
