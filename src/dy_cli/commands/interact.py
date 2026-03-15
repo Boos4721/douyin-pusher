@@ -95,27 +95,22 @@ def comment(aweme_id, content, account):
 @click.option("--account", default=None, help="使用指定账号")
 @click.option("--json-output", "as_json", is_flag=True, help="输出 JSON")
 def comments(aweme_id, count, account, as_json):
-    """查看视频评论列表。"""
+    """查看视频评论列表 (Playwright 抓取)。"""
     aweme_id = _resolve(aweme_id)
-    from dy_cli.engines.api_client import DouyinAPIClient, DouyinAPIError
-    client = DouyinAPIClient.from_config(account)
+    info(f"正在获取评论: {aweme_id}")
 
     try:
-        info(f"正在获取评论: {aweme_id}")
-        data = client.get_comments(aweme_id, count=count)
-        comment_list = data.get("comments", [])
+        comment_list = _pw(account).get_comments(aweme_id, count=count)
 
         if as_json:
             from dy_cli.utils.output import print_json
-            print_json(data)
+            print_json(comment_list)
         else:
             print_comments(comment_list)
 
-    except DouyinAPIError as e:
+    except PlaywrightError as e:
         error(f"获取评论失败: {e}")
         raise SystemExit(1)
-    finally:
-        client.close()
 
 
 @click.command("follow", help="关注用户")

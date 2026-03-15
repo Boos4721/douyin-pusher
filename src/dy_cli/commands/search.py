@@ -67,23 +67,74 @@ def search(keyword, sort, pub_time, search_type, count, account, as_json, output
         print_json(result)
         return
 
-    # Extract video list
+    # Extract results based on search type
     data_list = result.get("data", [])
-    videos = []
-    for item in data_list:
-        aweme_info = item.get("aweme_info")
-        if aweme_info:
-            videos.append(aweme_info)
 
-    # 缓存索引 — 支持 dy read 1 / dy download 3
-    save_index(videos)
+    if search_type == "user":
+        # 用户搜索: data[].user_list[].user_info
+        users = []
+        for item in data_list:
+            for u in item.get("user_list", []):
+                ui = u.get("user_info", {})
+                if ui:
+                    users.append(ui)
 
-    # 导出
-    if output:
-        export_data(videos, output)
+        if output:
+            export_data(users, output)
+            return
+
+        _print_user_list(users, keyword=keyword)
+    else:
+        # 视频搜索: data[].aweme_info
+        videos = []
+        for item in data_list:
+            aweme_info = item.get("aweme_info")
+            if aweme_info:
+                videos.append(aweme_info)
+
+        # 缓存索引 — 支持 dy read 1 / dy download 3
+        save_index(videos)
+
+        if output:
+            export_data(videos, output)
+            return
+
+        print_videos(videos, keyword=keyword)
+
+
+def _print_user_list(users: list[dict], keyword: str = ""):
+    """打印用户搜索结果。"""
+    from rich import box
+    from rich.table import Table
+
+    from dy_cli.utils.output import _fmt_count, console
+
+    if not users:
+        warning("未找到相关用户")
         return
 
-    print_videos(videos, keyword=keyword)
+    title = f"用户搜索: {keyword} ({len(users)} 条)" if keyword else f"用户列表 ({len(users)} 条)"
+    table = Table(title=title, box=box.ROUNDED, show_lines=True)
+    table.add_column("#", style="dim", width=3)
+    table.add_column("昵称", max_width=16, overflow="fold")
+    table.add_column("抖音号", max_width=14, overflow="fold")
+    table.add_column("粉丝", justify="right", width=10)
+    table.add_column("获赞", justify="right", width=10)
+    table.add_column("简介", max_width=30, overflow="fold")
+    table.add_column("sec_uid", style="dim", max_width=20, overflow="ellipsis")
+
+    for i, u in enumerate(users, 1):
+        table.add_row(
+            str(i),
+            u.get("nickname", "-"),
+            u.get("unique_id") or u.get("short_id") or "-",
+            _fmt_count(u.get("follower_count", "-")),
+            _fmt_count(u.get("total_favorited", "-")),
+            (u.get("signature") or "-")[:30],
+            (u.get("sec_uid") or "")[:18] + "…" if len(u.get("sec_uid", "")) > 18 else u.get("sec_uid", ""),
+        )
+
+    console.print(table)
 
 
 @click.command("detail", help="查看视频详情 (支持短索引: dy detail 1)")

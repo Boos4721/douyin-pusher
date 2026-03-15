@@ -44,6 +44,32 @@ def analytics(csv_file, page_size, account, as_json):
         info("请确保已登录: dy status")
         raise SystemExit(1)
 
+    # Parse API data if captured
+    api_items = result.get("api_data", {}).get("list", {}).get("items", [])
+    if api_items:
+        import datetime
+
+        rows = []
+        for item in api_items:
+            metrics = item.get("metrics", {})
+            create_time = item.get("create_time", 0)
+            try:
+                dt = datetime.datetime.fromtimestamp(create_time).strftime("%Y-%m-%d %H:%M")
+            except (ValueError, TypeError, OSError):
+                dt = "-"
+            rows.append({
+                "标题": item.get("description", "-")[:20] or "-",
+                "发布时间": dt,
+                "播放": metrics.get("play_count", "-"),
+                "完播率": metrics.get("finish_rate", "-"),
+                "点赞": metrics.get("digg_count", "-"),
+                "评论": metrics.get("comment_count", "-"),
+                "分享": metrics.get("share_count", "-"),
+                "涨粉": metrics.get("follow_count", "-"),
+                "可见性": item.get("visibility", "-"),
+            })
+        result = {"rows": rows}
+
     if as_json:
         print_json(result)
     else:

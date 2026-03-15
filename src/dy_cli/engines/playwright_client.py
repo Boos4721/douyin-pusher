@@ -573,84 +573,74 @@ class PlaywrightClient:
             page = await context.new_page()
 
             try:
-                # First go to creator center to establish session
+                # Intercept XHR responses to capture analytics API data
+                api_data = {}
+
+                async def on_response(response):
+                    url = response.url
+                    if "content/data" in url or "item/list" in url or "data/stats" in url:
+                        try:
+                            body = await response.json()
+                            api_data[url.split("?")[0].split("/")[-1]] = body
+                        except Exception:
+                            pass
+
+                page.on("response", on_response)
+
+                # Navigate to creator center
                 await page.goto(self.CREATOR_URL, wait_until="domcontentloaded")
                 await page.wait_for_timeout(3000)
 
-                # Check if logged in
                 if await page.get_by_text("扫码登录").count() > 0:
                     raise PlaywrightError("Cookie 已失效")
 
-                # Navigate to analytics page
+                # Navigate to content analytics
                 await page.goto(self.ANALYTICS_URL, wait_until="domcontentloaded")
                 await page.wait_for_timeout(5000)
 
-                # Try clicking "作品数据" tab if present
-                try:
-                    content_tab = page.locator('text=作品数据').first
-                    if await content_tab.count() > 0:
-                        await content_tab.click()
-                        await page.wait_for_timeout(3000)
-                except Exception:
-                    pass
+                # Try clicking "作品数据" tab
+                for tab_name in ["作品数据", "作品管理"]:
+                    try:
+                        tab = page.locator(f"text={tab_name}").first
+                        if await tab.count() > 0:
+                            await tab.click()
+                            await page.wait_for_timeout(3000)
+                            break
+                    except Exception:
+                        pass
 
-                # Extract data from the page — try multiple selectors
-                data = await page.evaluate("""() => {
-                    const rows = [];
+                # If we captured API data, use it directly
+                if api_data:
+                    return {"rows": [], "api_data": api_data, "url": page.url}
 
-                    // Strategy 1: table rows
-                    document.querySelectorAll('table tr, [class*="table"] tr').forEach(tr => {
-                        const cells = tr.querySelectorAll('td');
-                        if (cells.length >= 3) {
-                            const texts = Array.from(cells).map(c => c.textContent.trim());
-                            rows.push({
-                                '标题': texts[0] || '-',
-                                '发布时间': texts[1] || '-',
-                                '播放': texts[2] || '-',
-                                '完播率': texts[3] || '-',
-                                '点赞': texts[4] || '-',
-                                '评论': texts[5] || '-',
-                                '分享': texts[6] || '-',
-                                '涨粉': texts[7] || '-',
-                            });
+                # Fallback: scrape page content as structured text
+                page_data = await page.evaluate("""() => {
+                    const result = {rows: [], summary: {}, url: window.location.href};
+
+                    // Get page text in structured blocks
+                    const blocks = [];
+                    document.querySelectorAll('main, [class*="content"]').forEach(el => {
+                        if (el.offsetHeight > 100 && el.innerText.length > 20) {
+                            blocks.push(el.innerText.substring(0, 2000));
+                        }
+                    });
+                    result.page_content = blocks.slice(0, 3).join('\\n---\\n');
+
+                    // Extract any visible metrics
+                    document.querySelectorAll('[class*="metric"], [class*="stat"], [class*="overview"] > div').forEach(el => {
+                        const text = el.innerText.trim();
+                        if (text && text.length < 100) {
+                            const parts = text.split('\\n');
+                            if (parts.length >= 2) {
+                                result.summary[parts[0]] = parts[1];
+                            }
                         }
                     });
 
-                    // Strategy 2: card-style content items
-                    if (rows.length === 0) {
-                        document.querySelectorAll('[class*="content-card"], [class*="item-wrap"], [class*="data-row"]').forEach(item => {
-                            const title = item.querySelector('[class*="title"]')?.textContent?.trim() || '-';
-                            const numbers = [];
-                            item.querySelectorAll('[class*="num"], [class*="count"], [class*="data"]').forEach(n => {
-                                numbers.push(n.textContent.trim());
-                            });
-                            if (title !== '-' || numbers.length > 0) {
-                                rows.push({
-                                    '标题': title,
-                                    '发布时间': numbers[0] || '-',
-                                    '播放': numbers[1] || '-',
-                                    '完播率': numbers[2] || '-',
-                                    '点赞': numbers[3] || '-',
-                                    '评论': numbers[4] || '-',
-                                    '分享': numbers[5] || '-',
-                                    '涨粉': numbers[6] || '-',
-                                });
-                            }
-                        });
-                    }
-
-                    // Get summary stats
-                    const summary = {};
-                    document.querySelectorAll('[class*="overview"] [class*="item"], [class*="summary"] [class*="item"]').forEach(item => {
-                        const label = item.querySelector('[class*="label"], [class*="name"]')?.textContent?.trim();
-                        const value = item.querySelector('[class*="value"], [class*="num"]')?.textContent?.trim();
-                        if (label && value) summary[label] = value;
-                    });
-
-                    return { rows, summary, url: window.location.href };
+                    return result;
                 }""")
 
-                return data
+                return page_data
 
             finally:
                 await browser.close()
@@ -694,6 +684,80 @@ class PlaywrightClient:
                 }""")
 
                 return data
+
+            finally:
+                await browser.close()
+
+    # ------------------------------------------------------------------
+    # Comments (Playwright scraping — API needs a-bogus signature)
+    # ------------------------------------------------------------------
+
+    def get_comments(self, aweme_id: str, count: int = 20) -> list[dict]:
+        """从视频页面抓取评论。"""
+        if not self.cookie_exists():
+            raise PlaywrightError("未登录")
+        return _run_async(self._get_comments_async(aweme_id, count))
+
+    async def _get_comments_async(self, aweme_id: str, count: int) -> list[dict]:
+        from playwright.async_api import async_playwright
+        async with async_playwright() as pw:
+            browser = await pw.chromium.launch(headless=True)
+            context = await browser.new_context(
+                storage_state=self.cookie_file,
+                viewport={"width": 1920, "height": 1080},
+            )
+            page = await context.new_page()
+
+            try:
+                await page.goto(
+                    f"https://www.douyin.com/video/{aweme_id}",
+                    wait_until="domcontentloaded",
+                )
+                await page.wait_for_timeout(6000)
+
+                # Scroll to load more comments
+                for _ in range(max(0, count // 10 - 1)):
+                    await page.evaluate("window.scrollBy(0, 800)")
+                    await page.wait_for_timeout(1500)
+
+                comments = await page.evaluate("""() => {
+                    const items = document.querySelectorAll('[data-e2e="comment-item"]');
+                    const results = [];
+                    items.forEach(item => {
+                        const lines = (item.innerText || '').split('\\n').filter(l => l.trim());
+                        if (lines.length < 2) return;
+
+                        const nickname = lines[0] || '';
+                        const isAuthor = lines.includes('作者');
+
+                        // Find the main comment text (skip '作者', '...' etc)
+                        let text = '';
+                        for (let i = 1; i < lines.length; i++) {
+                            const l = lines[i];
+                            if (l === '作者' || l === '...' || l === '展开' || l.length < 2) continue;
+                            if (/^\\d+[天时分秒]前/.test(l) || /^\\d{4}/.test(l) || /·/.test(l)) break;
+                            text = l;
+                            break;
+                        }
+
+                        // Find likes (last numeric item)
+                        let digg = 0;
+                        const last = lines[lines.length - 1];
+                        if (/^\\d+$/.test(last)) digg = parseInt(last);
+
+                        if (nickname && text) {
+                            results.push({
+                                user: {nickname: nickname},
+                                text: text,
+                                digg_count: digg,
+                                is_author: isAuthor,
+                            });
+                        }
+                    });
+                    return results;
+                }""")
+
+                return comments[:count]
 
             finally:
                 await browser.close()
