@@ -11,7 +11,7 @@ from volcengine.visual.VisualService import VisualService
 class JimengVideoGenerator:
     """即梦AI (Jimeng) 视频生成3.0 Pro 核心类"""
 
-    def __init__(self, ak: Optional[str] = None, sk: Optional[str] = None):
+    def __init__(self, ak: Optional[str] = None, sk: Optional[str] = None, model: str = "pro"):
         self.ak = ak or os.getenv("VOLC_ACCESSKEY")
         self.sk = sk or os.getenv("VOLC_SECRETKEY")
         if not self.ak or not self.sk:
@@ -22,6 +22,13 @@ class JimengVideoGenerator:
         self.visual_service = VisualService()
         self.visual_service.set_ak(self.ak)
         self.visual_service.set_sk(self.sk)
+        
+        model_map = {
+            "pro": "jimeng_ti2v_v30_pro",
+            "720p": "jimeng_t2v_v30",
+            "1080p": "jimeng_t2v_v30_1080p"
+        }
+        self.req_key = model_map.get(model.lower(), "jimeng_ti2v_v30_pro")
 
     def generate(
         self,
@@ -38,22 +45,26 @@ class JimengVideoGenerator:
         frames = 121 if duration <= 5 else 241
 
         formdata = {
-            "req_key": "jimeng_ti2v_v30_pro",
+            "req_key": self.req_key,
             "prompt": prompt,
-            "frames": frames,
-            "aspect_ratio": aspect_ratio,
         }
 
-        if image_url:
-            formdata["image_urls"] = [image_url]
-        elif image_path:
-            if not os.path.exists(image_path):
-                raise FileNotFoundError(f"Image file not found: {image_path}")
-            with open(image_path, "rb") as f:
-                image_data = f.read()
-            formdata["binary_data_base64"] = [
-                base64.b64encode(image_data).decode("utf-8")
-            ]
+        if self.req_key == "jimeng_ti2v_v30_pro":
+            formdata["frames"] = frames
+            formdata["aspect_ratio"] = aspect_ratio
+            if image_url:
+                formdata["image_urls"] = [image_url]
+            elif image_path:
+                if not os.path.exists(image_path):
+                    raise FileNotFoundError(f"Image file not found: {image_path}")
+                with open(image_path, "rb") as f:
+                    image_data = f.read()
+                formdata["binary_data_base64"] = [
+                    base64.b64encode(image_data).decode("utf-8")
+                ]
+        else:
+            if image_url or image_path:
+                print(f"⚠️ 警告: 当前选用的即梦模型({self.req_key})仅支持文生视频，输入的图片将被忽略。如果需要图生视频，请使用 --model pro")
 
         try:
             resp = self.visual_service.cv_sync2async_submit_task(formdata)
@@ -75,7 +86,7 @@ class JimengVideoGenerator:
         """轮询任务状态"""
         start_time = time.time()
 
-        formdata = {"req_key": "jimeng_ti2v_v30_pro", "task_id": task_id}
+        formdata = {"req_key": self.req_key, "task_id": task_id}
 
         while time.time() - start_time < timeout:
             try:
@@ -134,6 +145,12 @@ if __name__ == "__main__":
         default=None,
         help="火山引擎 Secret Key，若不传则读取 VOLC_SECRETKEY 环境变量",
     )
+    parser.add_argument(
+        "--model",
+        default="pro",
+        choices=["pro", "720p", "1080p"],
+        help="选择即梦视频生成模型 (pro 支持图生视频与时长调整，720p/1080p 仅文生视频)",
+    )
     parser.add_argument("--prompt", required=True, help="视频生成提示词")
     parser.add_argument(
         "--image_url", default=None, help="图生视频的首帧图片 URL（选填）"
@@ -159,7 +176,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     try:
-        gen = JimengVideoGenerator(ak=args.ak, sk=args.sk)
+        gen = JimengVideoGenerator(ak=args.ak, sk=args.sk, model=args.model)
         tid = gen.generate(
             prompt=args.prompt,
             image_url=args.image_url,

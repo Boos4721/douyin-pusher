@@ -1,12 +1,12 @@
 # Sora2-Pusher
 
-🤖 AI 视频生成与社交媒体自动化发布助手。基于 [OpenClaw](https://github.com/openclaw/openclaw) 架构，深度集成 OpenAI Sora 2、字节跳动 Seedance 2.0 以及 **即梦AI 视频生成 3.0 Pro**。
+🤖 AI 视频生成与社交媒体自动化发布助手。基于 [OpenClaw](https://github.com/openclaw/openclaw) 架构，深度集成 OpenAI Sora 2、火山引擎 Seedance 2.0 以及 **即梦AI 视频生成 3.0**。
 
 ## ✨ 特性
 
 - **多引擎驱动**：
-  - **即梦AI 3.0 Pro**：基于火山引擎，支持多镜头叙事，精准遵循指令，支持高清专业级质感，提供出色的图生视频与文生视频能力。
-  - **ByteDance Seedance 2.0 (豆包)**：主打“原生音画同步”，适合高频卡点、精准口型的短视频创作。
+  - **即梦AI 3.0**：基于火山引擎，支持多镜头叙事，精准遵循指令。提供 **3.0 Pro** (支持图生/文生)、**3.0 1080P** 及 **3.0 720P** 多种模型版本供灵活选用。
+  - **火山引擎 Seedance 2.0 (豆包)**：主打“原生音画同步”，适合高频卡点、精准口型的短视频创作。
   - **OpenAI Sora 2**：主打“物理模拟”，适合高真实感、长时长的电影级大片。
 - **全模态支持**：全面支持**文生视频**和**图生视频**。
 - **全自动流水线**：从文本 Prompt 或首帧图片输入，到视频生成下载，再到抖音创作者中心自动发布闭环。
@@ -27,7 +27,7 @@
    ```
    *(注：在 OpenClaw 中安装此 Skill 时，此步骤将会自动执行)*
 4. 配置凭据 (以下信息可直接配置为环境变量，或在对话中直接发给 Agent)：
-   - **即梦AI 3.0 Pro**：需提供火山引擎 `VOLC_ACCESSKEY` (AK) 和 `VOLC_SECRETKEY` (SK)。
+   - **即梦AI**：需提供火山引擎 `VOLC_ACCESSKEY` (AK) 和 `VOLC_SECRETKEY` (SK)。
    - **Seedance 2.0 (豆包)**：需提供火山引擎 `VOLC_API_KEY` (Bearer Token) 与 `VOLC_MODEL_ENDPOINT` (推理终端 ID)。
    - **Sora 2 (Atlas网关)**：配置 `ATLAS_API_KEY`。
 
@@ -45,7 +45,7 @@
 ## 📁 目录结构
 
 - `SKILL.md`: 技能核心定义，指导 Agent 的行为逻辑和调用规则。
-- `scripts/jimeng_gen.py`: 即梦AI 3.0 Pro 专用生成脚本（AK/SK 鉴权）。
+- `scripts/jimeng_gen.py`: 即梦AI 生成脚本（支持 Pro / 720P / 1080P，AK/SK 鉴权）。
 - `scripts/volc_gen.py`: 火山引擎 Seedance 2.0 生成脚本（Bearer Token 鉴权）。
 - `scripts/video_gen.py`: Atlas Cloud 通用网关（默认指向 Sora 2）。
 - `references/douyin_publish.md`: 基于 PinchTab 的抖音自动化发布指南。
