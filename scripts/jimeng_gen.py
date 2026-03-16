@@ -134,7 +134,7 @@ class JimengVideoGenerator:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Volcengine Jimeng 3.0 Pro CLI")
+    parser = argparse.ArgumentParser(description="Volcengine Jimeng 3.0 CLI")
     parser.add_argument(
         "--ak",
         default=None,
