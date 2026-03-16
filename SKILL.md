@@ -1,7 +1,7 @@
 ---
 name: sora2-pusher
 description: >
-  AI 视频生成与社交媒体自动化发布技能。支持通过 OpenAI Sora 2、火山引擎 Seedance 2.0 以及即梦AI视频生成3.0 Pro 生成高质量视频，并自动驱动浏览器助手发布到抖音创作者中心。
+  AI 视频生成与社交媒体自动化发布技能。支持通过 OpenAI Sora 2、火山引擎 Seedance 2.0 以及即梦AI视频生成3.0 Pro 生成高质量视频，并利用 PinchTab 自动发布到抖音创作者中心。
   使用触发词："用火山引擎生成视频", "用即梦生成视频", "把这段文字生成视频发抖音", "生成视频并发布"。
   支持：(1) 文生视频，(2) 图生视频，(3) 视频自动发布到抖音。
 metadata:
@@ -12,11 +12,11 @@ metadata:
 
 # Sora Pusher Skill
 
-AI 视频生成与社交媒体自动化发布技能。集成火山引擎 Seedance / 即梦AI 与 OpenClaw 浏览器引擎。
+AI 视频生成与社交媒体自动化发布技能。集成火山引擎 Seedance / 即梦AI 与 PinchTab 浏览器控制引擎。
 
 ## 🚀 功能
 - **视频生成**：调用 **火山引擎 Ark (Seedance 2.0)** 或 **即梦AI 3.0 Pro** 生成视频（支持文生视频与图生视频）。
-- **自动发布**：驱动 `browser` 助手将生成的视频发布到抖音（Douyin）创作者中心。
+- **自动发布**：驱动 `pinchtab` 命令将生成的视频发布到抖音（Douyin）创作者中心。
 - **任务流水线**：从生成、状态轮询到文件下载与上传的全流程自动化。
 
 ## 📁 目录结构
@@ -30,7 +30,7 @@ AI 视频生成与社交媒体自动化发布技能。集成火山引擎 Seedanc
 ## 🛠️ 配置要求
 - **火山引擎 Ark (Seedance)**: `VOLC_API_KEY` (API 密钥) 及 `VOLC_MODEL_ENDPOINT` (推理终端 ID)。
 - **即梦AI 3.0 Pro**: `VOLC_ACCESSKEY` (AK) 及 `VOLC_SECRETKEY` (SK)。
-- 登录状态：需通过 `browser` 助手手动登录一次 `https://creator.douyin.com/`。
+- 登录状态：建议先执行 `pinchtab nav "https://creator.douyin.com/"` 进行一次手动扫码登录，登录后会持久化保存 profile。
 
 ## 📝 核心规则 (Rules)
 1. **模型与参数选择**：
@@ -43,7 +43,7 @@ AI 视频生成与社交媒体自动化发布技能。集成火山引擎 Seedanc
 3. **生成流程 - 火山引擎 Seedance**：
    - **文生视频**：`python3 ~/.openclaw/skills/sora-pusher/scripts/volc_gen.py --api_key "[自动提取或询问的API_KEY]" --prompt "[提示词]" --endpoint "[推理终端ID]"`
    - **图生视频**：追加 `--image_url "[图片链接]"` 参数。
-4. **发布流程**：生成成功并下载后（脚本输出 `RESULT_PATH:[路径]`），自动调用 `browser` 助手执行上传与发布指令。
+4. **发布流程**：生成成功并下载后（脚本输出 `RESULT_PATH:[路径]`），自动调用 `pinchtab` 命令行或 API 闭环执行上传与发布指令 (见 `references/douyin_publish.md`)。
 5. **超时与重试**：默认超时 900 秒，自动处理异步状态轮询。
 
 ## 📖 使用示例

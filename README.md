@@ -11,7 +11,7 @@
 - **全模态支持**：全面支持**文生视频**和**图生视频**。
 - **全自动流水线**：从文本 Prompt 或首帧图片输入，到视频生成下载，再到抖音创作者中心自动发布闭环。
 - **智能意图与上下文记忆**：支持用自然语言任意指定生成模型，系统将自动从对话历史中提取 API 凭证，告别繁琐的重复配置。
-- **Browser-in-the-Loop**：利用 OpenClaw 浏览器助手，安全复用抖音登录状态。
+- **Browser-in-the-Loop**：利用 [PinchTab](https://github.com/pinchtab/pinchtab) 浏览器引擎，安全复用抖音登录状态，执行稳定的全自动发版。
 
 ## 📦 安装
 
@@ -46,7 +46,7 @@
 - `scripts/jimeng_gen.py`: 即梦AI 3.0 Pro 专用生成脚本（AK/SK 鉴权）。
 - `scripts/volc_gen.py`: 火山引擎 Seedance 2.0 生成脚本（Bearer Token 鉴权）。
 - `scripts/video_gen.py`: Atlas Cloud 通用网关（默认指向 Sora 2）。
-- `references/douyin_publish.md`: 抖音自动化发布指南。
+- `references/douyin_publish.md`: 基于 PinchTab 的抖音自动化发布指南。
 
 ## 🤝 鸣谢
 

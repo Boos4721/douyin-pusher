@@ -1,26 +1,60 @@
-# 抖音视频发布流程 (Browser 驱动版)
+# 抖音视频发布流程 (PinchTab 驱动版)
 
-基于 OpenClaw `browser` 助手实现的抖音全自动发布流程规范。
+基于强大的浏览器控制工具 [PinchTab](https://github.com/pinchtab/pinchtab) 实现抖音自动化发布。通过 PinchTab 的持久化配置与 HTTP API/CLI，可以更稳定地执行发布流程。
 
-## 🚀 发布步骤
+## 🚀 环境准备
 
-1. **进入创作者中心并登录**:
-   - `browser(action="open", url="https://creator.douyin.com/")`
-   - 若未登录，系统会将二维码截图发给用户进行扫码。登录成功后状态会自动通过 profile 持久化。
+1. **安装 PinchTab**:
+   ```bash
+   curl -fsSL https://pinchtab.com/install.sh | bash
+   # 或者 macOS 下使用 brew
+   brew install pinchtab/tap/pinchtab
+   ```
+2. **启动 PinchTab 后台服务**:
+   ```bash
+   pinchtab daemon install
+   pinchtab daemon
+   ```
 
-2. **触发上传并选择文件**:
-   - 建议直接跳转上传页：`browser(action="open", url="https://creator.douyin.com/creator-micro/content/upload")`
-   - ⚠️ **核心注意**：浏览器自动化无法处理操作系统的文件选择弹窗。因此，必须使用上传专用的动作指令，或直接定位到 `<input type="file">` 元素注入文件。
-   - 示例：定位到上传区域并填入刚生成的视频的绝对路径 `RESULT_PATH`。
+## 🎥 自动化发布步骤
 
-3. **配置发布参数**:
-   - **填写标题与话题**：`browser(action="act", kind="type", ref="输入作品标题", text="[自定义标题] #AI #AI生成视频")`
-   - **等待上传完成**：在执行最终发布前，需确保视频文件已上传至 100%，否则发布按钮可能为置灰不可点击状态。
+我们可以直接通过 PinchTab CLI 驱动浏览器：
 
-4. **确认发布**:
-   - `browser(action="act", kind="click", ref="发布")`
-   - 发布后可检查页面是否出现“发布成功”的提示，或是否跳转回了作品管理列表。
+### 1. 打开创作者中心
+```bash
+pinchtab nav "https://creator.douyin.com/creator-micro/content/upload"
+```
+*(如果是首次使用，需在弹出的浏览器窗口中扫码登录，后续 PinchTab 会自动记录 Profile 持久化登录状态)*
 
-## 🛠️ 注意事项
-- **绝对路径**：在上传文件环节，务必使用生成脚本返回的完整**绝对路径**。
-- **动态元素适配**：抖音创作者后台的前端元素有时会发生更新（例如“上传视频”按钮改名叫“发布视频”），如果默认的 `ref` 定位失败，请先执行页面结构查看，找到最新的按钮名称后再进行点击。
+### 2. 交互与元素分析
+获取页面中所有可交互元素的 ref (如 e1, e2, e3)：
+```bash
+pinchtab snap -i
+```
+
+### 3. 上传视频文件
+在分析出的 DOM 中找到 `<input type="file">` 的对应 ref (假设为 e5)：
+```bash
+# 由于浏览器安全限制，通常使用 fill 或专用上传动作填入绝对路径
+pinchtab fill e5 "/Users/xxx/sora2-pusher/output.mp4"
+```
+
+### 4. 填写标题及参数
+假设标题输入框的 ref 为 e8：
+```bash
+pinchtab fill e8 "这是用AI生成的视频！ #AI生成 #震撼"
+```
+
+### 5. 点击发布
+确认视频上传进度达 100% 后，找到“发布”按钮的 ref (假设为 e12) 并点击：
+```bash
+pinchtab click e12
+```
+
+## 🤖 与 Agent 结合的技巧
+
+在使用大模型 (Agent) 执行此任务时，可以告知 Agent 使用以下逻辑闭环：
+1. Agent 调用 `pinchtab nav` 进入上传页。
+2. Agent 调用 `pinchtab snap -i` 获取页面控件字典。
+3. Agent 根据视觉或文本语义分析出 **上传输入框**、**标题输入框**、**发布按钮** 对应的 ref 编号。
+4. Agent 依次调用 `pinchtab fill` 与 `pinchtab click` 完成最终上传。
