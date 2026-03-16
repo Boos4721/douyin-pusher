@@ -20,10 +20,12 @@
    ```bash
    git clone git@github.com:Boos4721/sora2-pusher.git ~/.openclaw/skills/sora-pusher
    ```
-3. 依赖安装 (针对火山引擎接口):
+3. 依赖安装 (自动安装脚本依赖与 PinchTab):
    ```bash
-   pip install requests volcengine
+   pip install requests volcengine --break-system-packages
+   curl -fsSL https://pinchtab.com/install.sh | bash
    ```
+   *(注：在 OpenClaw 中安装此 Skill 时，此步骤将会自动执行)*
 4. 配置凭据 (以下信息可直接配置为环境变量，或在对话中直接发给 Agent)：
    - **即梦AI 3.0 Pro**：需提供火山引擎 `VOLC_ACCESSKEY` (AK) 和 `VOLC_SECRETKEY` (SK)。
    - **Seedance 2.0 (豆包)**：需提供火山引擎 `VOLC_API_KEY` (Bearer Token) 与 `VOLC_MODEL_ENDPOINT` (推理终端 ID)。
