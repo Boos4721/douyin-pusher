@@ -37,7 +37,7 @@ pinchtab snap -i
 在分析出的 DOM 中找到 `<input type="file">` 的对应 ref (假设为 e5)：
 ```bash
 # 由于浏览器安全限制，通常使用 fill 或专用上传动作填入绝对路径
-pinchtab fill e5 "/Users/xxx/sora2-pusher/output.mp4"
+pinchtab fill e5 "/Users/xxx/douyin-pusher/output.mp4"
 ```
 
 ### 4. 填写标题及参数

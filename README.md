@@ -18,7 +18,7 @@
 1. 确保已安装并配置好 [OpenClaw](https://docs.openclaw.ai)。
 2. 将本项目克隆到 OpenClaw 的技能目录：
    ```bash
-   git clone git@github.com:Boos4721/sora2-pusher.git ~/.openclaw/skills/sora-pusher
+   git clone git@github.com:Boos4721/douyin-pusher.git ~/.openclaw/skills/douyin-pusher
    ```
 3. 依赖安装 (自动安装脚本依赖与 PinchTab):
    ```bash
