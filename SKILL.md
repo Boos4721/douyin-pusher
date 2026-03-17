@@ -22,15 +22,48 @@ AI 视频生成与社交媒体自动化发布技能。集成火山引擎 Seedanc
 ## 📁 目录结构
 - `SKILL.md`: 技能核心定义与规范。
 - `scripts/`: 核心逻辑脚本。
-  - `jimeng_gen.py`: 即梦AI 生成脚本（支持 Pro / 720P / 1080P，使用 Volcengine SDK，AK/SK 鉴权）。
-  - `volc_gen.py`: 火山引擎 Ark Seedance 2.0 生成脚本（支持最新版多模态 API，Bearer Token 鉴权）。
-  - `video_gen.py`: 基于 Atlas Cloud 的备选生成脚本。
+  - `video/`: 视频生成模块（推荐使用）
+    - `generator.py`: 统一视频生成器入口，支持多模型切换
+    - `jimeng.py`: 即梦AI 3.0 生成器
+    - `volc.py`: 火山引擎 Seedance 生成器
+    - `atlas.py`: Atlas Cloud Sora 生成器
+    - `optimizer.py`: 提示词优化器
+    - `scheduler.py`: 定时任务调度
+  - `douyin/`: 抖音自动化模块
+    - `comment.py`: 评论管理
+  - `cli.py`: 命令行工具
+  - `agent.py`: OpenClaw 智能代理
+  - `storage.py`: 数据持久化（Cookie、任务、评论）
+  - `jimeng_gen.py`: 即梦AI 独立脚本（兼容旧版）
+  - `volc_gen.py`: 火山引擎独立脚本（兼容旧版）
+  - `video_gen.py`: Sora 独立脚本（兼容旧版）
 - `references/`: 平台发布流程指南。
 
 ## 🛠️ 配置要求
 - **火山引擎 Ark (Seedance)**: `VOLC_API_KEY` (API 密钥) 及 `VOLC_MODEL_ENDPOINT` (推理终端 ID)。
 - **即梦AI**: `VOLC_ACCESSKEY` (AK) 及 `VOLC_SECRETKEY` (SK)。
+- **Atlas Cloud Sora**: `ATLAS_API_KEY` (API 密钥)
 - 登录状态：如果系统尚未登录抖音，Agent 需要访问创作者中心，获取登录二维码的截图并回传给用户（如在飞书/TG中发回），等待用户扫码完成后再执行后续发布。PinchTab 会持久化保存 profile。
+
+## 🎯 推荐用法（使用统一模块）
+推荐使用统一的 `VideoGenerator` 接口，支持自动模型选择：
+
+```python
+from video.generator import VideoGenerator
+
+gen = VideoGenerator(model="auto")  # 自动选择最佳模型
+# 或指定模型: jimeng-pro, jimeng-720p, jimeng-1080p, seedance, sora
+
+# 生成视频
+task_id = gen.generate(prompt="提示词", image="可选图片路径", duration=5)
+video_url = gen.poll(task_id)
+local_path = gen.download(video_url, "output.mp4")
+```
+
+或使用 CLI：
+```bash
+python scripts/cli.py gen "视频提示词" -m jimeng-pro -d 5 -o output.mp4
+```
 
 ## 📝 核心规则 (Rules)
 1. **模型与参数选择**：
@@ -39,13 +72,34 @@ AI 视频生成与社交媒体自动化发布技能。集成火山引擎 Seedanc
 2. **处理用户上传的图片 (多模态适配)**：
    - 核心系统 (如 OpenClaw) 接收飞书、Telegram 等渠道的用户消息时，可能会包含图片附件。
    - **非常重要**：如果用户随消息上传了图片附件，Agent 需要读取该附件的本地路径，并将此路径作为 `--image_path` 传入生成脚本，从而触发图生视频逻辑。
-3. **生成流程 - 即梦AI (支持 3.0 Pro / 720P / 1080P)**：
-   - **文生视频**：`python3 ~/.openclaw/skills/sora-pusher/scripts/jimeng_gen.py --model [pro|720p|1080p] --ak "[AK]" --sk "[SK]" --prompt "[提示词]"`
-   - **图生视频 (仅限 Pro)**：在使用 `--model pro` 时，追加 `--image_url "[图片链接]"` 或是 `--image_path "[附件的本地图片路径]"`。
-   - 时长默认为 5 秒，支持 `--duration 10`。
-4. **生成流程 - 火山引擎 Seedance**：
-   - **文生视频**：`python3 ~/.openclaw/skills/sora-pusher/scripts/volc_gen.py --api_key "[API_KEY]" --prompt "[提示词]" --endpoint "[推理终端ID]"`
-   - **图生视频**：追加 `--image_url "[图片链接]"` 或是 `--image_path "[附件的本地图片路径]"`。
+3. **统一生成流程（推荐）**：
+   使用 `video.generator.VideoGenerator` 统一接口：
+   ```python
+   from video.generator import VideoGenerator
+
+   gen = VideoGenerator(model="auto")  # 自动选择
+   # 指定模型: jimeng-pro, jimeng-720p, jimeng-1080p, seedance, sora
+
+   # 文生视频
+   path = gen.generate_and_download(
+       prompt="提示词",
+       duration=5,
+       aspect_ratio="16:9",
+       output="output.mp4"
+   )
+
+   # 图生视频（仅 jimeng-pro, seedance 支持）
+   path = gen.generate_and_download(
+       prompt="提示词",
+       image="图片路径或URL",
+       duration=5,
+       output="output.mp4"
+   )
+   ```
+4. **兼容旧版脚本**：
+   - **即梦AI**：`python3 scripts/jimeng_gen.py --model [pro|720p|1080p] --ak "[AK]" --sk "[SK]" --prompt "[提示词]"`
+   - **火山引擎 Seedance**：`python3 scripts/volc_gen.py --api_key "[API_KEY]" --endpoint "[终端ID]" --prompt "[提示词]"`
+   - **Sora (Atlas)**：`python3 scripts/video_gen.py --prompt "[提示词]"`
 5. **发布流程**：生成成功并下载后（脚本输出 `RESULT_PATH:[路径]`），自动调用 `pinchtab` 命令行或 API 闭环执行上传与发布指令 (见 `references/douyin_publish.md`)。
 6. **超时与重试**：默认超时 900 秒，自动处理异步状态轮询。
 

@@ -45,10 +45,81 @@
 ## 📁 目录结构
 
 - `SKILL.md`: 技能核心定义，指导 Agent 的行为逻辑和调用规则。
-- `scripts/jimeng_gen.py`: 即梦AI 生成脚本（支持 Pro / 720P / 1080P，AK/SK 鉴权）。
-- `scripts/volc_gen.py`: 火山引擎 Seedance 2.0 生成脚本（Bearer Token 鉴权）。
-- `scripts/video_gen.py`: Atlas Cloud 通用网关（默认指向 Sora 2）。
+- `scripts/`: 核心脚本目录
+  - `video/`: 视频生成模块（推荐）
+    - `generator.py`: 统一视频生成器，支持多模型切换
+    - `jimeng.py`: 即梦AI 3.0 生成器
+    - `volc.py`: 火山引擎 Seedance 生成器
+    - `atlas.py`: Atlas Cloud Sora 生成器
+    - `optimizer.py`: 提示词优化器
+    - `scheduler.py`: 定时任务调度
+  - `douyin/`: 抖音自动化模块
+    - `comment.py`: 评论管理与自动回复
+  - `cli.py`: 命令行工具
+  - `agent.py`: OpenClaw 智能代理
+  - `storage.py`: 数据持久化
+  - `jimeng_gen.py`: 即梦AI 独立脚本（兼容）
+  - `volc_gen.py`: Seedance 独立脚本（兼容）
+  - `video_gen.py`: Sora 独立脚本（兼容）
 - `references/douyin_publish.md`: 基于 PinchTab 的抖音自动化发布指南。
+
+## 🔧 快速开始
+
+### Python API（推荐）
+
+```python
+from video.generator import VideoGenerator
+
+# 初始化生成器
+gen = VideoGenerator(model="jimeng-pro")  # 或 seedance, sora, auto
+
+# 生成视频
+path = gen.generate_and_download(
+    prompt="赛博朋克风格的都市夜景",
+    duration=5,
+    aspect_ratio="16:9",
+    output="output.mp4"
+)
+print(f"视频已保存: {path}")
+
+# 图生视频（仅 jimeng-pro, seedance 支持）
+path = gen.generate_and_download(
+    prompt="无人机视角飞行",
+    image="path/to/image.jpg",
+    duration=5,
+    output="output.mp4"
+)
+```
+
+### CLI 命令
+
+```bash
+# 生成视频
+python scripts/cli.py gen "视频提示词" -m jimeng-pro -d 5 -o output.mp4
+
+# 发布视频
+python scripts/cli.py publish video.mp4 -t "视频标题"
+
+# 登录检查
+python scripts/cli.py login --check
+
+# 定时发布
+python scripts/cli.py schedule video.mp4 "2024-01-01 12:00" -t "标题"
+
+# 查看任务
+python scripts/cli.py tasks
+python scripts/cli.py comments
+```
+
+### 智能代理（自然语言）
+
+```bash
+# 交互模式
+python scripts/agent.py --interactive
+
+# 或直接执行命令
+python scripts/agent.py "生成视频: 赛博朋克城市"
+```
 
 ## 🤝 鸣谢
 
