@@ -1,4 +1,4 @@
-# Sora2-Pusher
+# Douyin-Pusher
 
 🤖 AI 视频生成与社交媒体自动化发布助手。基于 [OpenClaw](https://github.com/openclaw/openclaw) 架构，深度集成 OpenAI Sora 2、火山引擎 Seedance 2.0 以及 **即梦AI 视频生成 3.0**。
 

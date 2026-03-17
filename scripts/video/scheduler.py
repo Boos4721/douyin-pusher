@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional
 
-STORAGE_DIR = Path.home() / ".sora2-pusher"
+STORAGE_DIR = Path.home() / ".douyin-pusher"
 SCHEDULE_FILE = STORAGE_DIR / "schedule.json"
 
 

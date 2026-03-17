@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 
 # 存储目录
-STORAGE_DIR = Path.home() / ".sora2-pusher"
+STORAGE_DIR = Path.home() / ".douyin-pusher"
 STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 

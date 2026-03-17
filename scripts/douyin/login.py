@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-COOKIE_DIR = Path.home() / ".sora2-pusher" / "cookies"
+COOKIE_DIR = Path.home() / ".douyin-pusher" / "cookies"
 COOKIE_DIR.mkdir(parents=True, exist_ok=True)
 
 

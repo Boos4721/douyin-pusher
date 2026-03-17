@@ -156,7 +156,7 @@ def cmd_auto_reply(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Sora2-Pusher - AI 视频生成与发布工具",
+        description="Douyin-Pusher - AI 视频生成与发布工具",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     subparsers = parser.add_subparsers(dest="command", help="可用命令")
