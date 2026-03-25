@@ -28,6 +28,48 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "output": "table",      # table | json
         "download_dir": os.path.expanduser("~/Downloads/douyin"),
     },
+    # LLM 配置
+    "llm": {
+        "provider": "openai",   # openai / claude / rule
+        "api_key_env": "OPENAI_API_KEY",
+        "model": "gpt-4o",
+    },
+    # 视频生成后端配置
+    "video_backends": {
+        # 即梦AI网页版 - 需要 cookies
+        "jimeng": {
+            "cookies_path": "~/.dy/cookies/jimeng.json",
+            "default_model": "jimeng-pro",
+        },
+        # 即梦API (火山引擎) - 需要 VOLC_ACCESSKEY/VOLC_SECRETKEY
+        "seedance": {
+            "ak_env": "VOLC_ACCESSKEY",
+            "sk_env": "VOLC_SECRETKEY",
+            "default_model": "seedance-pro",
+        },
+        # 小云雀网页版 - 需要 cookies
+        "xyq": {
+            "cookies_path": "~/.dy/cookies/xyq.json",
+            "default_model": "xyq-pro",
+        },
+        # Atlas Sora API - 需要 ATLAS_API_KEY
+        "sora": {
+            "api_key_env": "ATLAS_API_KEY",
+            "base_url": "https://api.atlascloud.ai/v1",
+        },
+    },
+    # 存储配置
+    "storage": {
+        "type": "json",         # json / sqlite
+        "dir": "~/.dy",
+    },
+    # 评论机器人配置
+    "comment_bot": {
+        "enabled": False,
+        "check_interval": 60,
+        "max_replies_per_run": 10,
+        "policy": "whitelist",  # whitelist / all
+    },
 }
 
 

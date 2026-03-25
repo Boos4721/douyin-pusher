@@ -2,16 +2,17 @@
 name: douyin
 description: |
   抖音全能 Skill：搜索、下载、发布、互动、热榜、直播、数据看板。
-  API Client 负责搜索/下载/采集（即时），Playwright 负责发布/登录/数据分析（按需浏览器）。
+  支持 AI 视频生成（即梦AI、小云雀、Atlas Sora）。
 metadata:
-  trigger: 抖音相关操作（搜索、下载、发布、热榜、直播、数据、评论）
+  trigger: 抖音相关操作（搜索、下载、发布、热榜、直播、数据、评论、AI视频生成）
 ---
 
 # 抖音统一 Skill
 
-本 Skill 整合两套引擎：
+本 Skill 整合多套引擎：
 - **API Client**（httpx 逆向 API）：搜索、下载、评论、热榜、直播、用户 — 即时响应
-- **Playwright**（浏览器自动化）：发布、登录、数据看板、通知 — 按需启动
+- **Playwright**（浏览器自动化）：发布、登录、数据看板、通知、AI视频生成 — 按需启动
+- **火山引擎 API**：即梦AI视频生成
 
 ## 目录结构
 
@@ -23,17 +24,25 @@ douyin/
 │   ├── engines/
 │   │   ├── api_client.py
 │   │   └── playwright_client.py
+│   ├── video_backends/        # AI 视频生成后端
+│   │   ├── jimeng.py          # 即梦AI网页版
+│   │   ├── seedance.py        # 即梦API (火山引擎)
+│   │   ├── xyq.py             # 小云雀网页版
+│   │   └── sora.py            # Atlas Sora API
+│   ├── services/              # 业务服务
+│   │   ├── storage.py         # 任务存储
+│   │   ├── prompt_opt.py      # LLM 提示词优化
+│   │   ├── scheduler.py       # 定时发布
+│   │   └── comment_reply.py   # 评论自动回复
 │   ├── commands/
 │   │   ├── search.py, download.py, publish.py
 │   │   ├── trending.py, live.py, analytics.py
-│   │   └── auth.py, profile.py, interact.py, ...
+│   │   ├── auth.py, profile.py, interact.py
+│   │   ├── gen.py              # AI 视频生成
+│   │   ├── jobs.py             # 任务管理
+│   │   └── comment_bot.py      # 评论机器人
 │   └── utils/
 │       ├── config.py, output.py, signature.py
-├── scripts/
-│   ├── douyin_login.py
-│   ├── douyin_publisher.py
-│   ├── douyin_analytics.py
-│   └── chrome_launcher.py
 └── config/
     └── accounts.json.example
 ```
@@ -53,7 +62,8 @@ douyin/
 | **发布视频/图文** | Playwright | `dy publish -t 标题 -c 描述 -v 视频` |
 | **扫码登录** | Playwright | `dy login` |
 | **数据看板** | Playwright | `dy analytics` |
-| **通知消息** | Playwright | `dy notifications` |
+| **AI 视频生成** | Playwright/API | `dy gen create ...` |
+| **评论自动回复** | 定时任务 | `dy comment-bot run` |
 
 ---
 
@@ -178,18 +188,173 @@ dy notifications --json-output
 
 ---
 
-## Part 3: 配置与运维
+## Part 3: AI 视频生成
+
+### 支持的后端
+
+| 后端 | 名称 | 来源 | 认证方式 | 模型 |
+|------|------|------|----------|------|
+| **jimeng** | 即梦AI网页版 | https://jimeng.jianying.com | cookies | seedance-2.0, seedance-2.0-fast |
+| **seedance** | 即梦API | 火山引擎 | VOLC_ACCESSKEY/SECRETKEY | jimeng-pro, jimeng-720p, jimeng-1080p |
+| **xyq** | 小云雀 | https://xyq.jianying.com | cookies | seedance-2.0, seedance-2.0-fast |
+| **sora** | Atlas Sora | API | ATLAS_API_KEY | sora-2 |
+
+### 前置条件
+
+1. **导出 Cookies**（jimeng/xyq 网页版）:
+   - 在浏览器中登录 jimeng.jianying.com 或 xyq.jianying.com
+   - 使用 EditThisCookie 插件导出 cookies
+   - 保存到 `~/.dy/cookies/jimeng.json` 或 `~/.dy/cookies/xyq.json`
+
+2. **设置环境变量**（seedance/sora API）:
+   ```bash
+   export VOLC_ACCESSKEY="your-access-key"
+   export VOLC_SECRETKEY="your-secret-key"
+   export ATLAS_API_KEY="your-atlas-api-key"
+   ```
+
+### 提示词优化
+
+```bash
+# 使用 LLM 优化提示词
+dy gen prompt-opt -p "一只猫在跑"
+
+# 指定 provider (openai/claude/rule)
+dy gen prompt-opt -p "一只猫在跑" --provider openai
+```
+
+优化原则：**主体 + 动作 + 风格 + 镜头 + 环境**
+
+### 创建生成任务
+
+```bash
+# 即梦AI网页版
+dy gen create -b jimeng -m seedance-2.0 -p "一只猫在草地上奔跑"
+
+# 即梦API (火山引擎)
+dy gen create -b seedance -m jimeng-pro -p "一只猫在草地上奔跑"
+
+# 小云雀
+dy gen create -b xyq -m seedance-2.0 -p "一只猫在草地上奔跑"
+
+# Atlas Sora
+dy gen create -b sora -m sora-2 -p "一只猫在草地上奔跑"
+
+# 常用选项
+dy gen create -b jimeng -m seedance-2.0 -p "..." --run-now      # 立即生成
+dy gen create -b jimeng -m seedance-2.0 -p "..." -t "标题"      # 视频标题
+dy gen create -b jimeng -m seedance-2.0 -p "..." -d "描述"      # 视频描述
+dy gen create -b jimeng -m seedance-2.0 -p "..." -s "2026-03-30 10:00"  # 定时发布
+```
+
+### 任务管理
+
+```bash
+# 列出任务
+dy jobs list
+dy jobs list --status generated
+
+# 查看任务详情
+dy jobs show JOB_ID
+
+# 设置定时发布
+dy jobs schedule JOB_ID -t "2026-03-30 10:00" -t "视频标题"
+
+# 列出定时任务
+dy jobs schedules
+
+# 取消定时任务
+dy jobs cancel-schedule SCHEDULE_ID
+
+# 执行待处理任务 (适合 cron 调用)
+dy jobs run-pending
+
+# 删除任务
+dy jobs delete JOB_ID
+```
+
+### 视频生成列表
+
+```bash
+dy gen list
+dy gen list --status generating
+dy gen show JOB_ID
+```
+
+---
+
+## Part 4: 评论自动回复
+
+### 前置条件
+
+```bash
+# 启用评论机器人
+dy comment-bot enable
+
+# 配置
+dy config set comment_bot.check_interval 60    # 检查间隔(秒)
+dy config set comment_bot.max_replies_per_run 10  # 每轮最大回复数
+dy config set comment_bot.policy whitelist     # 策略: whitelist / all
+```
+
+### 使用
+
+```bash
+# 单次执行
+dy comment-bot run
+dy comment-bot run --limit 5
+
+# 启动循环模式
+dy comment-bot loop
+
+# 查看状态
+dy comment-bot status
+
+# 列出评论
+dy comment-bot list
+dy comment-bot list --unreplied-only
+
+# 启用/禁用
+dy comment-bot enable
+dy comment-bot disable
+```
+
+---
+
+## Part 5: 配置与运维
 
 ### 配置文件
 
 `~/.dy/config.json`:
 
 ```bash
+# 查看配置
 dy config show
+
+# API 配置
 dy config set api.proxy http://127.0.0.1:7897
 dy config set api.timeout 60
+
+# Playwright 配置
 dy config set playwright.headless true
+
+# 下载目录
 dy config set default.download_dir ~/Videos
+
+# LLM 配置 (提示词优化)
+dy config set llm.provider openai       # openai / claude / rule
+dy config set llm.model gpt-4o
+
+# 视频后端配置
+dy config set video_backends.jimeng.cookies_path ~/.dy/cookies/jimeng.json
+dy config set video_backends.seedance.ak_env VOLC_ACCESSKEY
+dy config set video_backends.seedance.sk_env VOLC_SECRETKEY
+dy config set video_backends.xyq.cookies_path ~/.dy/cookies/xyq.json
+
+# 评论机器人配置
+dy config set comment_bot.enabled true
+dy config set comment_bot.check_interval 60
+dy config set comment_bot.policy whitelist
 ```
 
 ### 多账号
@@ -207,9 +372,24 @@ dy search "关键词" --account work
 - 过期后需重新 `dy login` 扫码
 - 不同账号 Cookie 文件独立
 
+### 积分优化策略 (Seedance)
+
+| 阶段 | 命令 | 积分 |
+|------|------|------|
+| 测试 | `--model seedance-2.0-fast --duration 5s` | 15积分/次 |
+| 正式 | `--model seedance-2.0 --duration 10s` | 50积分/次 |
+
+### 常用描述词
+
+- **景别**: 特写、近景、中景、远景、全景、鸟瞰
+- **运镜**: 推镜、拉镜、升镜头、降镜头、环绕镜头
+- **光线**: 自然光、电影级光影、霓虹灯光、月光
+- **氛围**: 烟雾弥漫、雾气弥漫、背景虚化、水下摄影
+
 ### 注意事项
 - 抖音签名算法 (a-bogus) 频繁更新，搜索/下载功能可能需要定期适配
 - 创作者中心 UI 也会更新，发布功能可能需要调整选择器
 - 批量操作建议加 2-5 秒延时，避免触发风控
+- AI 视频生成需要 cookies 保持登录状态，过期后需重新导出
 - 所有命令支持 `--json-output` 输出机器可读格式
 - 所有命令支持 `--account` 指定账号

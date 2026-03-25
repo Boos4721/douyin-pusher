@@ -146,6 +146,21 @@ from dy_cli.commands.config_cmd import config_group
 
 cli.add_command(config_group, "config")
 
+# 视频生成
+from dy_cli.commands.gen import gen_group
+
+cli.add_command(gen_group, "gen")
+
+# 任务管理
+from dy_cli.commands.jobs import jobs_group
+
+cli.add_command(jobs_group, "jobs")
+
+# 评论机器人
+from dy_cli.commands.comment_bot import comment_bot_group
+
+cli.add_command(comment_bot_group, "comment-bot")
+
 
 def main():
     cli()
