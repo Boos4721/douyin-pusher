@@ -33,8 +33,8 @@ pip install dy-cli
 Or from source:
 
 ```bash
-git clone https://github.com/Youhai020616/douyin.git
-cd douyin && bash setup.sh
+git clone https://github.com/Boos4721/douyin-pusher.git
+cd douyin-pusher && bash setup.sh
 ```
 
 ## Quick Start
@@ -61,6 +61,7 @@ dy publish -t "标题" -c "描述" -v video.mp4   # Publish video
 - 👤 **Profile** — user info, posts listing
 - 🔢 **Short Index** — `dy search → dy read 1 → dy like 1 → dy dl 1`
 - 📦 **Export** — `dy search "AI" -o results.csv` (JSON/CSV/YAML)
+- 🎨 **Dreamina** — 即梦 AIGC image/video generation (text2image, text2video, image2video)
 - 🔐 **Login** — QR scan + browser cookie auto-extraction
 - 👥 **Multi-Account** — isolated cookie storage
 - 🛡️ **Anti-Detection** — Gaussian jitter, exponential backoff, captcha cooldown
@@ -137,6 +138,21 @@ dy account list                          # List accounts
 dy config show                           # Show config
 dy config set api.proxy http://...       # Set proxy
 ```
+
+### Dreamina (即梦 AIGC)
+
+```bash
+dy dreamina login                        # Login to Dreamina
+dy dreamina credit                       # Check credit balance
+dy dreamina text2image -p "a cat"       # Text to image
+dy dreamina text2video -p "a cat"       # Text to video
+dy dreamina image2video -i img.jpg -p "camera move"  # Image to video
+dy dreamina tasks                        # List saved tasks
+dy dreamina query SUBMIT_ID              # Query async task result
+dy dreamina raw -- ...                   # Pass-through to dreamina CLI
+```
+
+详细使用指南请参考 [docs/dreamina.md](./docs/dreamina.md)。
 
 ### Aliases
 

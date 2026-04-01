@@ -146,6 +146,11 @@ from dy_cli.commands.config_cmd import config_group
 
 cli.add_command(config_group, "config")
 
+# 即梦 AIGC
+from dy_cli.commands.dreamina import dreamina_group
+
+cli.add_command(dreamina_group, "dreamina")
+
 
 def main():
     cli()

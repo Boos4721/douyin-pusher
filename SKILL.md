@@ -1,10 +1,11 @@
 ---
 name: douyin
 description: |
-  抖音全能 Skill：搜索、下载、发布、互动、热榜、直播、数据看板。
-  API Client 负责搜索/下载/采集（即时），Playwright 负责发布/登录/数据分析（按需浏览器）。
+  抖音全能 Skill：搜索、下载、发布、互动、热榜、直播、数据看板、即梦 AIGC 生成。
+  API Client 负责搜索/下载/采集（即时），Playwright 负责发布/登录/数据分析（按需浏览器），
+  dreamina CLI 负责即梦文生图/文生视频/图生视频等 AIGC 功能。
 metadata:
-  trigger: 抖音相关操作（搜索、下载、发布、热榜、直播、数据、评论）
+  trigger: 抖音相关操作（搜索、下载、发布、热榜、直播、数据、评论）、即梦 AIGC 生成（文生图、文生视频、图生视频）
 ---
 
 # 抖音统一 Skill
@@ -51,6 +52,9 @@ douyin/
 | 直播信息 | API | `dy live info ROOM_ID` |
 | 直播录制 | API + ffmpeg | `dy live record ROOM_ID` |
 | **发布视频/图文** | Playwright | `dy publish -t 标题 -c 描述 -v 视频` |
+| **即梦文生图** | dreamina CLI | `dy dreamina text2image -p "提示词"` |
+| **即梦文生视频** | dreamina CLI | `dy dreamina text2video -p "提示词"` |
+| **即梦图生视频** | dreamina CLI | `dy dreamina image2video -i img.jpg` |
 | **扫码登录** | Playwright | `dy login` |
 | **数据看板** | Playwright | `dy analytics` |
 | **通知消息** | Playwright | `dy notifications` |
@@ -207,9 +211,31 @@ dy search "关键词" --account work
 - 过期后需重新 `dy login` 扫码
 - 不同账号 Cookie 文件独立
 
+### 即梦 AIGC
+
+```bash
+# 账号管理
+dy dreamina login                    # 登录即梦
+dy dreamina logout                   # 退出
+dy dreamina credit                   # 查看余额
+
+# 生成功能
+dy dreamina text2image -p "一只猫"   # 文生图
+dy dreamina text2video -p "一只猫"   # 文生视频
+dy dreamina image2video -i img.jpg   # 图生视频
+
+# 任务管理
+dy dreamina tasks                    # 查看历史任务
+dy dreamina query SUBMIT_ID          # 查询异步任务结果
+
+# 透传模式 (直接使用 dreamina CLI 所有功能)
+dy dreamina raw -- text2image -h
+```
+
 ### 注意事项
 - 抖音签名算法 (a-bogus) 频繁更新，搜索/下载功能可能需要定期适配
 - 创作者中心 UI 也会更新，发布功能可能需要调整选择器
 - 批量操作建议加 2-5 秒延时，避免触发风控
 - 所有命令支持 `--json-output` 输出机器可读格式
 - 所有命令支持 `--account` 指定账号
+- 即梦功能需要先安装 dreamina CLI: `curl -fsSL https://jimeng.jianying.com/cli | bash`

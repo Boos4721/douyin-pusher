@@ -1,6 +1,6 @@
-# Claude Code 集成指南
+# OpenClaw 集成指南
 
-将 dy-cli 作为 Claude Code / Cursor 的技能使用。
+将 dy-cli 作为 OpenClaw / Cursor 的技能使用。
 
 ## 方式一：作为 OpenClaw Skill
 
@@ -9,16 +9,16 @@
 cp -r douyin ~/.openclaw/skills/douyin
 ```
 
-Claude Code 会自动读取 `SKILL.md` 并使用对应工具。
+OpenClaw 会自动读取 `SKILL.md` 并使用对应工具。
 
-## 方式二：直接在 Claude Code 中使用
+## 方式二：直接在 OpenClaw 中使用
 
-在项目中激活环境后，Claude Code 可以直接调用 `dy` 命令：
+在项目中激活环境后，OpenClaw 可以直接调用 `dy` 命令：
 
 ```bash
 source activate.sh
 
-# Claude Code 可以执行这些命令
+# OpenClaw 可以执行这些命令
 dy search "关键词"
 dy trending
 dy download URL
