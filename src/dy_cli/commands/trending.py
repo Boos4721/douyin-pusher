@@ -20,20 +20,17 @@ from dy_cli.utils.output import console, error, info, print_json, print_trending
 @click.option("-o", "--output", default=None, help="导出到文件 (.json/.csv/.yaml)")
 def trending(count, watch, account, as_json, output):
     """查看抖音热榜。"""
-    client = DouyinAPIClient.from_config(account)
-
     try:
-        if watch:
-            _watch_trending(client, count, as_json)
-        else:
-            _show_trending(client, count, as_json, output)
+        with DouyinAPIClient.from_config(account) as client:
+            if watch:
+                _watch_trending(client, count, as_json)
+            else:
+                _show_trending(client, count, as_json, output)
     except KeyboardInterrupt:
         info("已退出热榜监控")
     except DouyinAPIError as e:
         error(f"获取热榜失败: {e}")
         raise SystemExit(1)
-    finally:
-        client.close()
 
 
 def _show_trending(client: DouyinAPIClient, count: int, as_json: bool, output: str = None):

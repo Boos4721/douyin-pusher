@@ -119,8 +119,8 @@ class DouyinAPIClient:
                 },
                 headers={"Content-Type": "application/json"},
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("ttwid cookie 初始化失败: %s", e)
 
     # ------------------------------------------------------------------
     # Rate limiting & anti-detection
@@ -224,10 +224,25 @@ class DouyinAPIClient:
         except json.JSONDecodeError as e:
             raise DouyinAPIError(f"JSON 解析失败: {e}") from e
 
+    def __enter__(self) -> "DouyinAPIClient":
+        """支持 with 语句上下文管理器。"""
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type | None,
+        exc_val: BaseException | None,
+        exc_tb: object | None,
+    ) -> bool:
+        """退出 with 语句时自动关闭客户端。"""
+        self.close()
+        return False  # 不吞没异常
+
     def close(self):
         if self._client:
             self._client.close()
             self._client = None
+        logger.debug("API client closed")
 
     # ------------------------------------------------------------------
     # Cookie management
@@ -253,8 +268,8 @@ class DouyinAPIClient:
                     )
                 elif isinstance(cookie_data, str):
                     cookie = cookie_data
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("cookie 文件解析失败: %s", e)
 
         proxy = cfg["api"].get("proxy", "")
         timeout = cfg["api"].get("timeout", REQUEST_TIMEOUT)
@@ -297,8 +312,8 @@ class DouyinAPIClient:
                 if match:
                     return match.group(1)
 
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("短链接解析失败: %s", e)
 
         # Try extracting numbers that look like aweme_id from the URL itself
         match = re.search(r'/(\d{15,})', url)
